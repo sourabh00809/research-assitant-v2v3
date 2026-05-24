@@ -1,0 +1,25 @@
+[project]
+name = "ai-scientist-platform"
+version = "0.1.0"
+description = "Citation-grounded autonomous research workspace MVP."
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn",
+  "pydantic",
+  "pypdf",
+  "jinja2",
+  "pyyaml",
+  "sqlalchemy",
+  "alembic",
+  "psycopg[binary]",
+  "redis",
+  "celery",
+  "stripe",
+  "minio",
+  "docker",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

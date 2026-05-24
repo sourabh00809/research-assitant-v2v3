@@ -1,0 +1,105 @@
+services:
+  backend:
+    build: .
+    command: python -m uvicorn ai_scientist.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://ai_scientist:ai_scientist@postgres:5432/ai_scientist
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      AI_SCIENTIST_STORAGE_BACKEND: minio
+      AI_SCIENTIST_SANDBOX_BACKEND: docker
+    volumes:
+      - ./data:/app/data
+      - ./storage:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - postgres
+      - redis
+      - minio
+
+  frontend:
+    image: node:20-slim
+    working_dir: /app/frontend
+    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/app
+    environment:
+      NEXT_PUBLIC_API_BASE: http://localhost:8000
+    depends_on:
+      - backend
+
+  worker:
+    build: .
+    command: celery -A ai_scientist.celery_app.celery_app worker --loglevel=info --concurrency=${AI_SCIENTIST_WORKER_CONCURRENCY:-2}
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://ai_scientist:ai_scientist@postgres:5432/ai_scientist
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      AI_SCIENTIST_STORAGE_BACKEND: minio
+      AI_SCIENTIST_SANDBOX_BACKEND: docker
+    volumes:
+      - ./data:/app/data
+      - ./storage:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - backend
+      - redis
+
+  scheduler:
+    build: .
+    command: celery -A ai_scientist.celery_app.celery_app beat --loglevel=info
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+
+  postgres:
+    image: pgvector/pgvector:pg15
+    environment:
+      POSTGRES_DB: ai_scientist
+      POSTGRES_USER: ai_scientist
+      POSTGRES_PASSWORD: ai_scientist
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  stripe-cli:
+    image: stripe/stripe-cli:latest
+    profiles: ["stripe"]
+    command: listen --forward-to backend:8000/api/v1/billing/webhook
+    environment:
+      STRIPE_API_KEY: ${STRIPE_SECRET_KEY}
+    depends_on:
+      - backend
+
+volumes:
+  postgres-data:
+  minio-data:

@@ -1,0 +1,14 @@
+id: social_science_survey
+title: Social Science Survey Analysis
+domain: social_science
+task: survey_analysis
+recommended_datasets:
+  - {"name": "General Social Survey", "source": "template", "url": "https://gss.norc.org/"}
+  - {"name": "Custom stratified survey sample", "source": "template", "url": ""}
+baseline_models:
+  - "Ordinal logistic regression"
+  - "Linear regression with controls"
+  - "Difference-in-differences baseline"
+metrics: ["effect_size", "confidence_interval_width", "p_value", "response_bias"]
+ablation_vars: ["control_variables", "sample_weighting", "stratification", "missing_data_strategy"]
+validation: "pre-registered analysis with robustness checks and multiple-comparison correction"

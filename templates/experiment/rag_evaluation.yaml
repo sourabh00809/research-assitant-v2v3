@@ -1,0 +1,14 @@
+id: rag_evaluation
+title: Retrieval-Augmented Generation Evaluation
+domain: ai
+task: rag_evaluation
+recommended_datasets:
+  - {"name": "Natural Questions", "source": "template", "url": "https://ai.google.com/research/NaturalQuestions"}
+  - {"name": "HotpotQA", "source": "template", "url": "https://hotpotqa.github.io/"}
+baseline_models:
+  - "BM25 + deterministic synthesis"
+  - "Dense retriever + synthesis"
+  - "No-retrieval LLM baseline"
+metrics: ["answer_accuracy", "citation_support", "unsupported_claim_rate", "latency"]
+ablation_vars: ["retrieval_top_k", "reranker", "memory_context", "citation_threshold"]
+validation: "paired question-level comparison with bootstrap confidence intervals"

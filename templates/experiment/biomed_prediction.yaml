@@ -1,0 +1,14 @@
+id: biomed_prediction
+title: Biomedical Prediction
+domain: biomed
+task: prediction
+recommended_datasets:
+  - {"name": "MIMIC-IV", "source": "template", "url": "https://physionet.org/content/mimiciv/"}
+  - {"name": "PubMed abstract cohort", "source": "template", "url": "https://pubmed.ncbi.nlm.nih.gov/"}
+baseline_models:
+  - "LogisticRegression"
+  - "RandomForest"
+  - "ClinicalBERT"
+metrics: ["roc_auc", "f1_macro", "calibration_error", "sensitivity", "specificity"]
+ablation_vars: ["feature_set", "class_weighting", "threshold", "external_validation_site"]
+validation: "nested cross-validation with external holdout where available"

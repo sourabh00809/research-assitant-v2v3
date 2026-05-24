@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Scientist Platform</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="mark">AS</div>
+          <div>
+            <h1>AI Scientist</h1>
+            <p>Research operating system</p>
+          </div>
+        </div>
+
+        <section class="panel compact">
+          <label for="projectName">New project</label>
+          <input id="projectName" placeholder="e.g. Protein design survey" />
+          <button id="createProject">Create</button>
+        </section>
+
+        <nav id="projectList" class="project-list" aria-label="Projects"></nav>
+
+        <section class="panel compact">
+          <div class="section-head sidebar-head">
+            <h3>Connectors</h3>
+          </div>
+          <div id="connectorList" class="connector-list"></div>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Citation-grounded autonomous workflow</p>
+            <h2 id="activeProjectName">Research Workspace</h2>
+          </div>
+          <div class="status-pill" id="healthStatus">Checking API</div>
+        </header>
+
+        <section class="question-band">
+          <div>
+            <h3>Research question</h3>
+            <p>Agents search, rank, extract, critique, synthesize, and save durable memory.</p>
+          </div>
+          <form id="questionForm" class="question-form">
+            <textarea id="questionInput" rows="3" placeholder="What is the evidence that autonomous research agents can improve scientific discovery workflows?"></textarea>
+            <div class="form-row">
+              <label>
+                Max papers
+                <input id="maxPapers" type="number" min="3" max="12" value="6" />
+              </label>
+              <button id="runButton" type="submit">Run agents</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="grid two">
+          <article class="panel">
+            <div class="section-head">
+              <h3>Agent Activity</h3>
+              <span id="runStatus">Idle</span>
+            </div>
+            <div id="agentSteps" class="timeline"></div>
+          </article>
+
+          <article class="panel">
+            <div class="section-head">
+              <h3>Research Memory</h3>
+              <span id="memoryCount">0 items</span>
+            </div>
+            <form id="memoryForm" class="memory-form">
+              <select id="memoryKind" aria-label="Memory kind">
+                <option value="idea">Idea</option>
+                <option value="gap">Gap</option>
+                <option value="claim">Claim</option>
+                <option value="method">Method</option>
+                <option value="dataset">Dataset</option>
+                <option value="metric">Metric</option>
+                <option value="baseline">Baseline</option>
+                <option value="experiment_idea">Experiment idea</option>
+                <option value="hypothesis">Hypothesis</option>
+                <option value="rejected_direction">Rejected direction</option>
+                <option value="user_note">User note</option>
+                <option value="note">Note</option>
+              </select>
+              <input id="memoryTags" placeholder="tags, comma separated" />
+              <textarea id="memoryContent" rows="2" placeholder="Save a durable finding, failed idea, method, or note"></textarea>
+              <button type="submit">Save memory</button>
+            </form>
+            <div id="memoryList" class="memory-list"></div>
+          </article>
+        </section>
+
+        <section class="grid two">
+          <article class="panel">
+            <div class="section-head">
+              <h3>Source Library</h3>
+              <span id="paperCount">0 papers</span>
+            </div>
+            <form id="paperForm" class="paper-form">
+              <input id="paperFile" type="file" accept="application/pdf,.pdf" />
+              <button type="submit">Upload PDF</button>
+            </form>
+            <div id="paperList" class="paper-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="section-head">
+              <h3>Run Context</h3>
+              <span id="providerStatus">deterministic</span>
+            </div>
+            <div id="runContext" class="context-list"></div>
+          </article>
+        </section>
+
+        <section class="panel brief-panel">
+          <div class="section-head">
+            <h3>Research Brief</h3>
+            <div class="head-actions">
+              <button id="planButton" class="secondary-button" type="button" disabled>Generate Experiment Plan</button>
+              <a id="exportBrief" class="ghost-link disabled" href="#" aria-disabled="true">Export Markdown</a>
+              <span id="briefTimestamp">No brief yet</span>
+            </div>
+          </div>
+          <div id="briefOutput" class="brief-empty">
+            Run a research question to generate a citation-grounded brief, evidence panel, and paper matrix.
+          </div>
+        </section>
+
+        <section class="grid two">
+          <article class="panel">
+            <div class="section-head">
+              <h3>Experiment Planner</h3>
+              <div class="head-actions">
+                <button id="recommendPlanButton" class="secondary-button" type="button">Recommend</button>
+                <button id="scriptButton" class="secondary-button" type="button" disabled>Generate Script</button>
+                <a id="exportPlan" class="ghost-link disabled" href="#" aria-disabled="true">Export Plan</a>
+                <span id="planTimestamp">No plan yet</span>
+              </div>
+            </div>
+            <div id="planRecommendation" class="context-list"></div>
+            <div id="planOutput" class="brief-empty">Generate an experiment plan after creating a research brief.</div>
+          </article>
+
+          <article class="panel">
+            <div class="section-head">
+              <h3>Research Tasks</h3>
+              <span id="taskCount">0 tasks</span>
+            </div>
+            <div id="taskList" class="task-list"></div>
+          </article>
+        </section>
+
+        <section class="grid two">
+          <article class="panel">
+            <div class="section-head">
+              <h3>Hypotheses</h3>
+              <div class="head-actions">
+                <button id="hypothesisButton" class="secondary-button" type="button" disabled>Generate Hypotheses</button>
+                <span id="hypothesisCount">0 items</span>
+              </div>
+            </div>
+            <div id="hypothesisList" class="hypothesis-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="section-head">
+              <h3>Research Graph</h3>
+              <button id="graphButton" class="secondary-button" type="button">Refresh Graph</button>
+            </div>
+            <div id="graphSummary" class="graph-summary"></div>
+            <div id="graphList" class="graph-list"></div>
+          </article>
+        </section>
+
+        <section class="grid two">
+          <article class="panel">
+            <div class="section-head">
+              <h3>Baseline Critique</h3>
+              <span id="baselineCount">0 items</span>
+            </div>
+            <div id="baselineList" class="critique-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="section-head">
+              <h3>Statistical Validation</h3>
+              <span id="validationCount">0 items</span>
+            </div>
+            <div id="validationList" class="critique-list"></div>
+          </article>
+        </section>
+
+        <section class="grid two">
+          <article class="panel">
+            <div class="section-head">
+              <h3>Evidence Panel</h3>
+              <span id="evidenceCount">0 claims</span>
+            </div>
+            <div id="evidenceList" class="evidence-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="section-head">
+              <h3>Paper Matrix</h3>
+              <span id="matrixCount">0 rows</span>
+            </div>
+            <div id="paperMatrix" class="matrix"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

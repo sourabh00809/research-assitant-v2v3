@@ -1,0 +1,13 @@
+id: nlp_classification
+title: NLP Text Classification
+domain: nlp
+task: text_classification
+recommended_datasets:
+  - {"name": "IMDb", "source": "template", "url": "https://huggingface.co/datasets/imdb"}
+  - {"name": "AG News", "source": "template", "url": "https://huggingface.co/datasets/ag_news"}
+baseline_models:
+  - "LogisticRegression (TF-IDF)"
+  - "DistilBERT (fine-tuned)"
+metrics: ["accuracy", "f1_macro", "roc_auc"]
+ablation_vars: ["embedding_dim", "learning_rate", "batch_size", "retrieval_top_k"]
+validation: "5-fold cross-validation with stratification"

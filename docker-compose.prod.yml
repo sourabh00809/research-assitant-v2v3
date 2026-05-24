@@ -1,0 +1,122 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - .env.production
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - backend
+
+  backend:
+    build: .
+    restart: unless-stopped
+    command: sh -c "alembic upgrade head && python -m uvicorn ai_scientist.main:app --host 0.0.0.0 --port 8000 --proxy-headers"
+    env_file:
+      - .env.production
+    environment:
+      AI_SCIENTIST_ENV: production
+      AI_SCIENTIST_STORE_BACKEND: postgres
+      DATABASE_URL: postgresql://ai_scientist:${POSTGRES_PASSWORD}@postgres:5432/ai_scientist
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      AI_SCIENTIST_STORAGE_BACKEND: minio
+      AI_SCIENTIST_SANDBOX_BACKEND: docker
+      AI_SCIENTIST_COOKIE_SECURE: "true"
+    volumes:
+      - ./data:/app/data
+      - ./storage:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: celery -A ai_scientist.celery_app.celery_app worker --loglevel=info --concurrency=${AI_SCIENTIST_WORKER_CONCURRENCY:-2}
+    env_file:
+      - .env.production
+    environment:
+      AI_SCIENTIST_ENV: production
+      AI_SCIENTIST_STORE_BACKEND: postgres
+      DATABASE_URL: postgresql://ai_scientist:${POSTGRES_PASSWORD}@postgres:5432/ai_scientist
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      AI_SCIENTIST_STORAGE_BACKEND: minio
+      AI_SCIENTIST_SANDBOX_BACKEND: docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - backend
+      - redis
+
+  scheduler:
+    build: .
+    restart: unless-stopped
+    command: celery -A ai_scientist.celery_app.celery_app beat --loglevel=info
+    env_file:
+      - .env.production
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+
+  postgres:
+    image: pgvector/pgvector:pg15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ai_scientist
+      POSTGRES_USER: ai_scientist
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_scientist -d ai_scientist"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  caddy-data:
+  caddy-config:
+  postgres-data:
+  redis-data:
+  minio-data:

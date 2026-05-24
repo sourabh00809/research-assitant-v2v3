@@ -1,0 +1,15 @@
+id: image_classification
+title: Image Classification
+domain: vision
+task: image_classification
+recommended_datasets:
+  - {"name": "CIFAR-10", "source": "template", "url": "https://www.cs.toronto.edu/~kriz/cifar.html"}
+  - {"name": "CIFAR-100", "source": "template", "url": "https://www.cs.toronto.edu/~kriz/cifar.html"}
+  - {"name": "ImageNet subset", "source": "template", "url": "https://www.image-net.org/"}
+baseline_models:
+  - "ResNet-18"
+  - "ResNet-50"
+  - "ViT-B/16"
+metrics: ["accuracy", "f1_macro", "calibration_error"]
+ablation_vars: ["augmentation", "learning_rate", "batch_size", "backbone"]
+validation: "train/validation/test split with stratified labels and repeated seeds"
