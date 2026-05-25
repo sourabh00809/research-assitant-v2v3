@@ -15,6 +15,17 @@ const SUGGESTED_QUERIES = [
   "Evaluation of large language model reasoning capabilities",
 ];
 
+type BriefResult = {
+  error?: string;
+  brief?: {
+    title: string;
+    evidence_items?: unknown[];
+    question_interpretation?: string;
+    key_findings?: string[];
+    suggested_next_directions?: string[];
+  };
+};
+
 export default function WorkspacePage() {
   const params = useParams();
   const router = useRouter();
@@ -23,7 +34,7 @@ export default function WorkspacePage() {
   const { data: projects, mutate } = useSWR<Project[]>("/api/v1/projects", api);
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState("");
-  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [result, setResult] = useState<BriefResult | null>(null);
 
   const project = projects?.find((p) => p.id === projectId);
   const brief = project?.briefs?.[0];
@@ -34,7 +45,7 @@ export default function WorkspacePage() {
     setBusy("run");
     setResult(null);
     try {
-      const res = await postApi<any>(`/api/projects/${projectId}/questions/run`, { question, max_papers: 6, use_memory: true });
+      const res = await postApi<BriefResult>(`/api/projects/${projectId}/questions/run`, { question, max_papers: 6, use_memory: true });
       setResult(res);
       await mutate();
     } catch (err) {
@@ -92,39 +103,39 @@ export default function WorkspacePage() {
               </div>
             </Panel>
 
-            {result?.error && (
+            {result?.error ? (
               <Panel title="Error">
-                <p className="text-sm text-red-600">{result.error}</p>
+                <p className="text-sm text-red-600">{String(result.error)}</p>
               </Panel>
-            )}
+            ) : null}
 
-            {result?.brief && (
+            {result?.brief ? (
               <Panel title={result.brief.title} meta={`${result.brief.evidence_items?.length ?? 0} evidence items`}>
                 <div className="grid gap-4">
-                  {result.brief.question_interpretation && (
+                  {result.brief.question_interpretation ? (
                     <div>
                       <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Interpretation</h3>
                       <p className="text-sm text-slate-700">{result.brief.question_interpretation}</p>
                     </div>
-                  )}
+                  ) : null}
 
-                  {result.brief.key_findings?.length > 0 && (
+                  {result.brief.key_findings?.length ? (
                     <div>
                       <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Key Findings</h3>
                       <ul className="list-inside list-disc space-y-1 text-sm text-slate-700">
                         {result.brief.key_findings.slice(0, 5).map((f: string, i: number) => <li key={i}>{f}</li>)}
                       </ul>
                     </div>
-                  )}
+                  ) : null}
 
-                  {result.brief.suggested_next_directions?.length > 0 && (
+                  {result.brief.suggested_next_directions?.length ? (
                     <div>
                       <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Next Directions</h3>
                       <ul className="list-inside list-disc space-y-1 text-sm text-slate-700">
                         {result.brief.suggested_next_directions.slice(0, 3).map((d: string, i: number) => <li key={i}>{d}</li>)}
                       </ul>
                     </div>
-                  )}
+                  ) : null}
 
                   <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-3">
                     <button onClick={() => router.push(`/projects/${projectId}/evidence`)} className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
@@ -139,7 +150,7 @@ export default function WorkspacePage() {
                   </div>
                 </div>
               </Panel>
-            )}
+            ) : null}
 
             {evidence.length > 0 && !result && (
               <Panel title="Latest Evidence" meta={`${evidence.length} items`}>

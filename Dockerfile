@@ -24,7 +24,7 @@ RUN groupadd -r app && useradd -r -g app -d /app -s /sbin/nologin app
 COPY pyproject.toml README.md /app/
 COPY migrations /app/migrations
 COPY alembic.ini /app/alembic.ini
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir --upgrade setuptools && pip install --no-cache-dir -e .
 
 COPY src /app/src
 COPY templates /app/templates
