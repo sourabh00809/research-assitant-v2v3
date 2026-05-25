@@ -263,10 +263,7 @@ class ResearchBrief(BaseModel):
     unsupported_claims: list[str] = Field(default_factory=list)
     speculative_suggestions: list[str] = Field(default_factory=list)
     memory_used: list[str] = Field(default_factory=list)
-<<<<<<< HEAD
     memory_relevance_scores: list[MemoryRelevanceScore] = Field(default_factory=list)
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
     quality_report: "EvidenceQualityReport | None" = None
     bibliography: list[str]
     created_at: str
@@ -284,14 +281,11 @@ class EvidenceQualityReport(BaseModel):
     missing_statistical_validation: list[str] = Field(default_factory=list)
     speculative_conclusions: list[str] = Field(default_factory=list)
     insufficient_evidence: bool = False
-<<<<<<< HEAD
     semantic_hits: int = 0
     keyword_hits: int = 0
     hybrid_hits: int = 0
     embedding_coverage: float = Field(default=0.0, ge=0.0, le=1.0)
     connectors_used: list[str] = Field(default_factory=list)
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
     summary: str = ""
     created_at: str
 
@@ -537,14 +531,11 @@ class ResearchProject(BaseModel):
     uploaded_papers: list[UploadedPaper] = Field(default_factory=list)
     agent_runs: list[AgentRun] = Field(default_factory=list)
     quality_reports: list[EvidenceQualityReport] = Field(default_factory=list)
-<<<<<<< HEAD
     autonomous_agents: list["AgentDefinition"] = Field(default_factory=list)
     autonomous_agent_runs: list["AgentRunRecord"] = Field(default_factory=list)
     saved_searches: list["SavedSearch"] = Field(default_factory=list)
     notifications: list["NotificationRecord"] = Field(default_factory=list)
     execution_artifacts: list["ExecutionArtifact"] = Field(default_factory=list)
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 
 
 class CreateProjectRequest(BaseModel):
@@ -734,10 +725,11 @@ class SubscriptionRecord(BaseModel):
 class JobRecord(BaseModel):
     id: str
     project_id: str | None = None
-    kind: Literal["pdf_ingestion", "connector_search", "embedding_update", "script_generation", "export_generation", "agent_workflow"]
+    kind: Literal["pdf_ingestion", "connector_search", "embedding_update", "script_generation", "export_generation", "agent_workflow", "research_pipeline"]
     status: Literal["queued", "running", "completed", "failed", "retrying"] = "queued"
     attempts: int = 0
     max_attempts: int = 3
+    result: dict[str, Any] = Field(default_factory=dict)
     error: str = ""
     created_at: str
     updated_at: str | None = None
@@ -844,7 +836,7 @@ class BillingWebhookRequest(BaseModel):
 
 class QueueJobRequest(BaseModel):
     project_id: str | None = None
-    kind: Literal["pdf_ingestion", "connector_search", "embedding_update", "script_generation", "export_generation", "agent_workflow"]
+    kind: Literal["pdf_ingestion", "connector_search", "embedding_update", "script_generation", "export_generation", "agent_workflow", "research_pipeline"]
     payload: dict[str, Any] = Field(default_factory=dict)
 
 

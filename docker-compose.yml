@@ -1,36 +1,45 @@
 services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - frontend
+      - backend
+
   backend:
     build: .
     command: python -m uvicorn ai_scientist.main:app --host 0.0.0.0 --port 8000
-    ports:
-      - "8000:8000"
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+psycopg://ai_scientist:ai_scientist@postgres:5432/ai_scientist
+      DATABASE_URL: postgresql://ai_scientist:ai_scientist@postgres:5432/ai_scientist
       REDIS_URL: redis://redis:6379/0
       MINIO_ENDPOINT: minio:9000
+      AI_SCIENTIST_STORE_BACKEND: postgres
       AI_SCIENTIST_STORAGE_BACKEND: minio
-      AI_SCIENTIST_SANDBOX_BACKEND: docker
     volumes:
       - ./data:/app/data
       - ./storage:/app/storage
-      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - postgres
-      - redis
-      - minio
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
 
   frontend:
     image: node:20-slim
     working_dir: /app/frontend
     command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
-    ports:
-      - "3000:3000"
     volumes:
-      - ./:/app
+      - ./frontend:/app/frontend
     environment:
-      NEXT_PUBLIC_API_BASE: http://localhost:8000
+      NEXT_PUBLIC_API_BASE: http://backend:8000
     depends_on:
       - backend
 
@@ -40,15 +49,14 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+psycopg://ai_scientist:ai_scientist@postgres:5432/ai_scientist
+      DATABASE_URL: postgresql://ai_scientist:ai_scientist@postgres:5432/ai_scientist
       REDIS_URL: redis://redis:6379/0
       MINIO_ENDPOINT: minio:9000
+      AI_SCIENTIST_STORE_BACKEND: postgres
       AI_SCIENTIST_STORAGE_BACKEND: minio
-      AI_SCIENTIST_SANDBOX_BACKEND: docker
     volumes:
       - ./data:/app/data
       - ./storage:/app/storage
-      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - backend
       - redis
@@ -73,6 +81,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_scientist -d ai_scientist"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   redis:
     image: redis:7-alpine

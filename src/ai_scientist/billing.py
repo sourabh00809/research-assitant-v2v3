@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import hmac
 import hashlib
+import hmac
 
 from .config import settings
 from .models import SubscriptionRecord
-from .saas import stripe_webhook_stub
-
+from .saas import apply_webhook_event
 
 PRICE_BY_TIER = {
     "free": lambda: settings.stripe_price_free,
@@ -41,8 +40,19 @@ def create_checkout_session(team_id: str, tier: str, success_url: str, cancel_ur
     }
 
 
-def create_portal_session(team_id: str, return_url: str) -> dict:
-    return {"provider": "stripe-test-stub", "url": f"{return_url}?portal=stub&team_id={team_id}"}
+def create_portal_session(customer_id: str, return_url: str) -> dict:
+    if settings.stripe_secret_key and customer_id:
+        try:
+            import stripe  # type: ignore
+            stripe.api_key = settings.stripe_secret_key
+            session = stripe.billing_portal.Session.create(
+                customer=customer_id,
+                return_url=return_url,
+            )
+            return {"provider": "stripe", "url": session.url, "id": session.id}
+        except Exception as exc:
+            return {"provider": "stripe", "url": "", "id": "", "error": str(exc)}
+    return {"provider": "stub", "url": f"{return_url}?portal=stub", "id": ""}
 
 
 def verify_webhook_signature(payload: bytes, signature: str) -> bool:
@@ -53,4 +63,4 @@ def verify_webhook_signature(payload: bytes, signature: str) -> bool:
 
 
 def apply_webhook(event: dict, subscription: SubscriptionRecord) -> SubscriptionRecord:
-    return stripe_webhook_stub(event, subscription)
+    return apply_webhook_event(event, subscription)

@@ -11,7 +11,6 @@ from .models import JobRecord, ObjectStorageRecord, SubscriptionRecord, Team, Te
 from .postgres_store import PostgresStore
 from .storage import SQLiteStore
 
-
 TABLES = [
     "projects",
     "questions",

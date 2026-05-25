@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import math
 import re
 from dataclasses import dataclass
@@ -8,6 +9,7 @@ from typing import Iterable
 
 from .models import ChunkRankingResult, DocumentChunk, EmbeddingRecord, MemoryItem, ScoredResult, new_id, utc_now
 
+logger = logging.getLogger(__name__)
 
 DEFAULT_EMBEDDING_MODEL = "deterministic-hash-v1"
 VECTOR_DIMENSIONS = 96
@@ -29,8 +31,29 @@ SYNONYM_GROUPS = [
 class EmbeddingService:
     def __init__(self, model: str = DEFAULT_EMBEDDING_MODEL):
         self.model = model
+        self._sentence_transformer = None
+        if model.startswith("sentence-transformers/"):
+            self._init_sentence_transformer(model)
+
+    def _init_sentence_transformer(self, model: str) -> None:
+        try:
+            from sentence_transformers import SentenceTransformer  # type: ignore
+            self._sentence_transformer = SentenceTransformer(model.replace("sentence-transformers/", ""))
+            logger.info("Loaded sentence-transformers model: %s", model)
+        except ImportError:
+            logger.warning("sentence-transformers not installed, falling back to hash embeddings for model: %s", model)
+            self._sentence_transformer = None
+        except Exception as exc:
+            logger.warning("Failed to load sentence-transformers model %s: %s", model, exc)
+            self._sentence_transformer = None
 
     def embed_text(self, text: str) -> list[float]:
+        if self._sentence_transformer is not None:
+            try:
+                vector = self._sentence_transformer.encode(text).tolist()
+                return [float(v) for v in vector]
+            except Exception:
+                pass
         vector = [0.0] * VECTOR_DIMENSIONS
         for token in expand_terms(tokenize(text)):
             digest = hashlib.sha256(token.encode("utf-8")).digest()
@@ -40,6 +63,11 @@ class EmbeddingService:
         return normalize(vector)
 
     def embed_batch(self, texts: Iterable[str]) -> list[list[float]]:
+        if self._sentence_transformer is not None:
+            try:
+                return [self.embed_text(text) for text in texts]
+            except Exception:
+                pass
         return [self.embed_text(text) for text in texts]
 
     def record(self, artifact_type: str, artifact_id: str, text: str) -> EmbeddingRecord:

@@ -1,14 +1,17 @@
 import "./globals.css";
+import { AuthProvider } from "../components/AuthProvider";
 
 export const metadata = {
-  title: "AI Scientist Workspace",
-  description: "Dynamic research workspace for AI Scientist"
+  title: "AI Scientist Platform",
+  description: "Citation-grounded research intelligence workspace",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

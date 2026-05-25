@@ -2,22 +2,22 @@ from __future__ import annotations
 
 import re
 
+from .ai_providers import AIProvider, DeterministicProvider
 from .embeddings import memory_relevance
+from .intelligence import build_quality_report, evidence_from_extractions, extract_from_sources
 from .models import (
     AgentRun,
     AgentStep,
     EvidenceItem,
+    MemoryItem,
     MemoryRelevanceScore,
     PaperComparison,
     ResearchBrief,
     ResearchQuestion,
-    MemoryItem,
     new_id,
     utc_now,
 )
 from .retrieval import SearchService
-from .ai_providers import AIProvider, DeterministicProvider
-from .intelligence import build_quality_report, evidence_from_extractions, extract_from_sources
 
 
 class ResearchOrchestrator:
@@ -73,10 +73,7 @@ class ResearchOrchestrator:
 
         source_extractions = extract_from_sources(papers)
         evidence = evidence_from_extractions(source_extractions)
-<<<<<<< HEAD
         apply_retrieval_metadata(question.text, papers, evidence)
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
         matrix = build_matrix(papers)
         run.steps.append(
             AgentStep(
@@ -99,8 +96,6 @@ class ResearchOrchestrator:
         )
 
         critique = critique_methods(matrix)
-        weak_flags = critique["weak_flags"]
-        open_problems = critique["open_problems"]
         run.steps.append(
             AgentStep(
                 name="Methodology Critique Agent",
@@ -121,10 +116,7 @@ class ResearchOrchestrator:
             matrix,
             critique,
             memory_context,
-<<<<<<< HEAD
             memory_scores,
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
             provider=run.provider,
             provider_summary=provider_result.text,
         )
@@ -134,13 +126,10 @@ class ResearchOrchestrator:
         brief.unsupported_claims = quality_report.unsupported_claims
         brief.speculative_suggestions = quality_report.speculative_conclusions
         brief.memory_used = [item.id for item in memory_context]
-<<<<<<< HEAD
         brief.memory_relevance_scores = [
             MemoryRelevanceScore(memory_item_id=item.id, similarity_score=score, influence=influence)
             for item, score, influence in memory_scores
         ]
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
         if quality_report.insufficient_evidence:
             brief.key_findings = ["Insufficient evidence: retrieved sources do not support strong conclusions yet."]
         brief.quality_report = quality_report
@@ -320,6 +309,32 @@ def critique_methods(matrix: list[PaperComparison]) -> dict:
     }
 
 
+def _parse_findings(provider_summary: str, top_papers: list) -> list[str]:
+    lines = [line.strip("- *").strip() for line in provider_summary.split("\n") if line.strip()]
+    findings = [line for line in lines if any(kw in line.lower() for kw in ["finding", "result", "show", "demonstrate", "reveal", "suggest", "indicate", "key", "observe"])]
+    if findings:
+        return findings[:5]
+    evidence_lines = [line for line in lines if len(line) > 60 and line.endswith(".")][:5]
+    return evidence_lines or [
+        f"{paper.title} is relevant because {paper.relevance_reason} [{paper.id}]"
+        for paper in top_papers
+    ]
+
+
+def _parse_directions(provider_summary: str) -> list[str]:
+    lines = [line.strip("- *").strip() for line in provider_summary.split("\n") if line.strip()]
+    direction_keywords = ["next step", "recommend", "future", "suggest", "direction", "follow-up", "further", "should"]
+    directions = [line for line in lines if any(kw in line.lower() for kw in direction_keywords)]
+    if not directions:
+        numbered = [line for line in lines if line[:1].isdigit() or line.startswith("(")]
+        directions = numbered
+    return directions[:5] or [
+        "Run a full-text review for the highest-ranked papers before making novelty claims.",
+        "Convert recurring limitations into testable research questions with explicit datasets and evaluation metrics.",
+        "Track rejected directions in memory so future agent runs do not repeat weak ideas.",
+    ]
+
+
 def synthesize_brief(
     question_text: str,
     papers,
@@ -327,44 +342,51 @@ def synthesize_brief(
     matrix,
     critique,
     memory_context: list[MemoryItem],
-<<<<<<< HEAD
     memory_scores: list[tuple[MemoryItem, float, str]] | None = None,
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
     provider: str = "deterministic",
     provider_summary: str = "",
 ) -> ResearchBrief:
     top_papers = papers[: min(4, len(papers))]
-    key_findings = [
-        f"{paper.title} is relevant because {paper.relevance_reason} [{paper.id}]"
-        for paper in top_papers
-    ]
+
+    if provider_summary:
+        interpretation = provider_summary[:500]
+        findings = _parse_findings(provider_summary, top_papers)
+        directions = _parse_directions(provider_summary)
+    else:
+        interpretation = (
+            "The platform interprets this as a literature investigation requiring relevant sources, "
+            "method comparison, evidence quality checks, and cautious gap identification."
+        )
+        findings = [
+            f"{paper.title} is relevant because {paper.relevance_reason} [{paper.id}]"
+            for paper in top_papers
+        ]
+        directions = [
+            "Run a full-text review for the highest-ranked papers before making novelty claims.",
+            "Convert recurring limitations into testable research questions with explicit datasets and evaluation metrics.",
+            "Track rejected directions in memory so future agent runs do not repeat weak ideas.",
+        ]
+
+    if memory_context and not provider_summary:
+        directions.insert(0, "Reconcile this brief against prior project memory before adding new research directions.")
+
     methodology_assessment = [
         f"{row.source_id}: score={row.quality_score}/100 | method='{row.method}' | metrics='{row.metrics}' | baselines='{row.baselines}'"
         for row in matrix[:6]
     ]
-    next_directions = [
-        "Run a full-text review for the highest-ranked papers before making novelty claims.",
-        "Convert recurring limitations into testable research questions with explicit datasets and evaluation metrics.",
-        "Track rejected directions in memory so future agent runs do not repeat weak ideas.",
-    ]
-    if memory_context:
-        next_directions.insert(0, "Reconcile this brief against prior project memory before adding new research directions.")
+
     return ResearchBrief(
         id=new_id("brief"),
         question_id="pending",
         title=f"Research Brief: {question_text[:90]}",
-        question_interpretation=(
-            "The platform interprets this as a literature investigation requiring relevant sources, "
-            "method comparison, evidence quality checks, and cautious gap identification."
-        ),
-        key_findings=key_findings or ["Insufficient evidence: no relevant sources were retrieved."],
+        question_interpretation=interpretation,
+        key_findings=findings or ["Insufficient evidence: no relevant sources were retrieved."],
         evidence_items=evidence,
         paper_matrix=matrix,
         methodology_assessment=methodology_assessment,
         weak_evidence_flags=critique["weak_flags"],
         open_problems=critique["open_problems"],
-        suggested_next_directions=next_directions,
+        suggested_next_directions=directions,
         baseline_recommendations=critique["baseline_recommendations"],
         statistical_validation=critique["statistical_validation"],
         provider_used=provider,

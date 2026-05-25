@@ -3,129 +3,138 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from pathlib import Path
-from urllib.parse import parse_qs
+from contextlib import asynccontextmanager
 from email import policy
 from email.parser import BytesParser
-<<<<<<< HEAD
+from pathlib import Path
 from time import perf_counter
+from urllib.parse import parse_qs
 from uuid import uuid4
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 
-from fastapi import FastAPI, HTTPException, Request, Response as FastAPIResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi import Response as FastAPIResponse
 from fastapi.middleware.cors import CORSMiddleware
-<<<<<<< HEAD
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
-=======
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+    StreamingResponse,
+)
 from fastapi.staticfiles import StaticFiles
 
 from .agents import ResearchOrchestrator
+from .ai_providers import build_provider
+from .auth import (
+    COOKIE_NAME,
+    JWT_COOKIE_NAME,
+    PasswordGateMiddleware,
+    decode_jwt,
+    login_page,
+    make_jwt,
+    make_session,
+    password_hash,
+    verify_password,
+)
 from .autonomous import (
     complete_literature_monitor,
-    create_saved_search as create_saved_search_record,
     literature_monitor_step,
     record_execution_artifact,
     request_experiment_approval,
     start_agent_run,
 )
-from .ai_providers import build_provider
-from .auth import COOKIE_NAME, JWT_COOKIE_NAME, PasswordGateMiddleware, decode_jwt, login_page, make_jwt, make_session, password_hash, verify_password
+from .autonomous import (
+    create_saved_search as create_saved_search_record,
+)
 from .billing import apply_webhook, create_checkout_session, create_portal_session, verify_webhook_signature
 from .config import settings
+from .csrf import csrf_middleware, set_csrf_cookie
+from .embeddings import rank_chunks
+from .experiment import generate_script, list_templates, recommend_experiment_plan
 from .experiments import create_experiment_plan
 from .export import brief_to_markdown, experiment_plan_to_markdown
-from .experiment import generate_script, list_templates, recommend_experiment_plan
 from .graph import build_research_graph
 from .hypotheses import generate_hypotheses
 from .ingestion import chunks_to_paper_sources, ingest_pdf_bytes
-from .embeddings import rank_chunks
 from .jobs import job_health, queue_job
-from .object_storage import ObjectStore, storage_health
-from .platform_db import ALEMBIC_BOOTSTRAP_SQL, database_health
-from .rate_limit import check_rate_limit
-from .rbac import require_role
-from .saas import create_single_user_tenant, create_team_membership, usage_allowed, usage_summary
-from .sandbox import run_sandbox
 from .models import (
-    AddMemoryRequest,
     AddAnnotationRequest,
-    BootstrapTenantRequest,
+    AddMemoryRequest,
+    AgentDecision,
+    AgentDefinition,
     BillingCheckoutRequest,
-    BillingWebhookRequest,
+    BootstrapTenantRequest,
+    CreateAgentRequest,
     CreateCollectionRequest,
     CreateExperimentPlanRequest,
     CreateProjectRequest,
     CreateResearchTaskRequest,
-    CreateAgentRequest,
     CreateSavedSearchRequest,
     EvidenceFeedbackRequest,
+    EvidenceQualityReport,
     ExperimentPlan,
-    GenerateScriptRequest,
     GenerateHypothesesRequest,
+    GenerateScriptRequest,
     HypothesisCandidate,
+    LoginRequest,
     MemoryItem,
     PaperExtractionSet,
-<<<<<<< HEAD
-    LoginRequest,
+    PromoteMemoryRequest,
     QueueJobRequest,
-    PromoteMemoryRequest,
-    RecordUsageRequest,
     RecommendExperimentPlanRequest,
-    UpdateExperimentPlanRequest,
-    AgentDefinition,
-    AgentDecision,
-    AgentRunRecord,
-=======
-    PromoteMemoryRequest,
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
+    RecordUsageRequest,
     ResearchAnnotation,
-    EvidenceQualityReport,
+    ResearchGraph,
     ResearchProject,
     ResearchQuestion,
     ResearchTask,
-    ResearchGraph,
+    RunAgentStepRequest,
     RunQuestionRequest,
     RunQuestionResponse,
-    RunAgentStepRequest,
     SandboxRunRequest,
     SignupRequest,
     SourceCollection,
-    UsageEvent,
+    UpdateExperimentPlanRequest,
     UploadedPaper,
+    UsageEvent,
     new_id,
     utc_now,
 )
-<<<<<<< HEAD
+from .object_storage import ObjectStore, storage_health
+from .platform_db import ALEMBIC_BOOTSTRAP_SQL, database_health
+from .rate_limit import check_rate_limit, clear_failed_logins, is_locked, record_failed_login
+from .rbac import require_role
+from .saas import create_single_user_tenant, create_team_membership, usage_summary
+from .sandbox import run_sandbox
 from .store_factory import build_store
-=======
-from .storage import SQLiteStore
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 
 logger = logging.getLogger("ai_scientist")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-<<<<<<< HEAD
 STORE = build_store()
-=======
-STORE = SQLiteStore(settings.db_path)
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 ORCHESTRATOR = ResearchOrchestrator(ai_provider=build_provider(settings.ai_provider, settings.model))
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 OBJECT_STORE = ObjectStore()
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    validate_production_configuration()
+    yield
+
 
 app = FastAPI(
     title="AI Scientist Platform",
     description="Citation-grounded research intelligence workspace.",
     version="0.1.1",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[settings.public_base_url] if settings.production else [settings.public_base_url, "http://localhost:3000", "http://localhost"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -134,8 +143,16 @@ app.add_middleware(PasswordGateMiddleware, password=settings.app_password)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+if not settings.disable_auth:
+    app.middleware("http")(csrf_middleware)
 
-<<<<<<< HEAD
+
+@app.get("/api/v1/auth/csrf-token")
+def get_csrf_token(request: Request, response: FastAPIResponse) -> dict:
+    token = set_csrf_cookie(response, request)
+    return {"csrf_token": token}
+
+
 @app.middleware("http")
 async def request_context_logging(request: Request, call_next):
     request_id = request.headers.get("x-request-id") or uuid4().hex
@@ -158,7 +175,6 @@ async def request_context_logging(request: Request, call_next):
     return response
 
 
-@app.on_event("startup")
 def validate_production_configuration() -> None:
     if not settings.production:
         return
@@ -178,8 +194,6 @@ def validate_production_configuration() -> None:
         raise RuntimeError("Production configuration is unsafe: " + "; ".join(failures))
 
 
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 @app.exception_handler(Exception)
 async def log_unhandled_exception(request: Request, exc: Exception):
     logger.exception("api_error path=%s method=%s error=%s", request.url.path, request.method, exc)
@@ -187,7 +201,12 @@ async def log_unhandled_exception(request: Request, exc: Exception):
 
 
 @app.get("/")
-def index() -> RedirectResponse:
+def index() -> HTMLResponse:
+    frontend_dir = BASE_DIR / "frontend" / "out"
+    if frontend_dir.exists():
+        index_path = frontend_dir / "index.html"
+        if index_path.exists():
+            return HTMLResponse(index_path.read_text(encoding="utf-8"))
     return RedirectResponse("/app", status_code=307)
 
 
@@ -198,14 +217,20 @@ def legacy_index() -> FileResponse:
 
 @app.get("/app")
 def next_app_placeholder() -> HTMLResponse:
-    path = BASE_DIR / "frontend" / "out" / "index.html"
-    if path.exists():
-        return HTMLResponse(path.read_text(encoding="utf-8"))
+    frontend_dir = BASE_DIR / "frontend" / "out"
+    if frontend_dir.exists():
+        return RedirectResponse("/", status_code=302)
     return HTMLResponse(v2_v3_workspace_html())
 
 
 @app.get("/login")
 def login() -> HTMLResponse:
+    frontend_dir = BASE_DIR / "frontend" / "out"
+    if frontend_dir.exists():
+        login_path = frontend_dir / "login" / "index.html"
+        if login_path.exists():
+            return HTMLResponse(login_path.read_text(encoding="utf-8"))
+        return RedirectResponse("/", status_code=302)
     return login_page()
 
 
@@ -241,7 +266,12 @@ def versioned_health() -> dict:
 
 
 @app.post("/api/v1/auth/signup")
-def signup(request: SignupRequest, response: FastAPIResponse) -> dict:
+def signup(request: SignupRequest, response: FastAPIResponse, http_request: Request) -> dict:
+    set_csrf_cookie(response, http_request)
+    ip = http_request.client.host if http_request.client else "unknown"
+    rate = check_rate_limit(f"signup:{ip}", 2, 3600)
+    if not rate["allowed"]:
+        raise HTTPException(status_code=429, detail="Too many signup attempts. Try again later.")
     existing = STORE.get_user_by_email(request.email)
     if existing:
         raise HTTPException(status_code=409, detail="Email already registered")
@@ -255,14 +285,25 @@ def signup(request: SignupRequest, response: FastAPIResponse) -> dict:
     membership = create_team_membership(user, team)
     STORE.save_tenant_bundle(user, team, membership, subscription)
     token = make_jwt({"sub": user.id, "team_id": team.id, "role": membership.role}, settings.jwt_secret, settings.jwt_ttl_seconds)
-    response.set_cookie(JWT_COOKIE_NAME, token, httponly=True, secure=settings.cookie_secure, samesite=settings.cookie_samesite)
+    _set_jwt_cookie(response, token)
+    logger.info("auth:signup user=%s team=%s ip=%s", user.id, team.id, ip)
     return {"user": user.model_dump(mode="json"), "team": team.model_dump(mode="json"), "role": membership.role}
 
 
 @app.post("/api/v1/auth/login")
-def login_v1(request: LoginRequest, response: FastAPIResponse) -> dict:
-    user = STORE.get_user_by_email(request.email)
+def login_v1(request: LoginRequest, response: FastAPIResponse, http_request: Request) -> dict:
+    set_csrf_cookie(response, http_request)
+    email_key = request.email.strip().lower()
+    ip = http_request.client.host if http_request.client else "unknown"
+    rate = check_rate_limit(f"login:{ip}", 5, 300)
+    if not rate["allowed"]:
+        raise HTTPException(status_code=429, detail="Too many login attempts. Try again later.")
+    if is_locked(email_key):
+        raise HTTPException(status_code=429, detail="Account temporarily locked due to too many failed attempts. Try again in 15 minutes.")
+    user = STORE.get_user_by_email(email_key)
     if not user or not verify_password(request.password, user.password_hash):
+        lock_status = record_failed_login(email_key)
+        logger.warning("auth:login_failed email=%s ip=%s attempts=%d", email_key, ip, lock_status["attempts"])
         raise HTTPException(status_code=401, detail="Invalid email or password")
     membership = (STORE.list_team_memberships(user_id=user.id) or [None])[0]
     if not membership:
@@ -270,19 +311,25 @@ def login_v1(request: LoginRequest, response: FastAPIResponse) -> dict:
     team = STORE.get_team(membership.team_id)
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
+    clear_failed_logins(email_key)
     token = make_jwt({"sub": user.id, "team_id": team.id, "role": membership.role}, settings.jwt_secret, settings.jwt_ttl_seconds)
-    response.set_cookie(JWT_COOKIE_NAME, token, httponly=True, secure=settings.cookie_secure, samesite=settings.cookie_samesite)
+    _set_jwt_cookie(response, token)
+    logger.info("auth:login user=%s team=%s ip=%s", user.id, team.id, ip)
     return {"user": user.model_dump(mode="json"), "team": team.model_dump(mode="json"), "role": membership.role}
 
 
 @app.post("/api/v1/auth/logout")
-def logout_v1(response: FastAPIResponse) -> dict:
-    response.delete_cookie(JWT_COOKIE_NAME)
+def logout_v1(response: FastAPIResponse, http_request: Request) -> dict:
+    _delete_jwt_cookie(response)
+    claims = current_claims(http_request)
+    if claims:
+        logger.info("auth:logout user=%s ip=%s", claims.user_id, http_request.client.host if http_request.client else "unknown")
     return {"status": "ok"}
 
 
 @app.get("/api/v1/auth/session")
-def auth_session(request: Request) -> dict:
+def auth_session(request: Request, response: FastAPIResponse) -> dict:
+    set_csrf_cookie(response, request)
     claims = decode_jwt(request.cookies.get(JWT_COOKIE_NAME, ""), settings.jwt_secret)
     if not claims:
         return {"authenticated": False}
@@ -294,6 +341,52 @@ def auth_session(request: Request) -> dict:
         "team": team.model_dump(mode="json") if team else None,
         "role": claims.role,
     }
+
+
+def _set_jwt_cookie(response: FastAPIResponse, token: str) -> None:
+    response.set_cookie(
+        key=JWT_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        path="/",
+    )
+
+
+def _delete_jwt_cookie(response: FastAPIResponse) -> None:
+    response.delete_cookie(
+        key=JWT_COOKIE_NAME,
+        path="/",
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+    )
+
+
+@app.post("/api/v1/auth/change-password")
+async def change_password(request: Request, response: FastAPIResponse) -> dict:
+    claims = require_claims(request)
+    body = json.loads((await request.body()).decode("utf-8") or "{}")
+    current = body.get("current_password", "")
+    new_pass = body.get("new_password", "")
+    confirm = body.get("confirm_password", "")
+    if not current or not new_pass or not confirm:
+        raise HTTPException(status_code=400, detail="current_password, new_password, and confirm_password are required")
+    if new_pass != confirm:
+        raise HTTPException(status_code=400, detail="New passwords do not match")
+    if len(new_pass) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    user = STORE.get_user(claims.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not verify_password(current, user.password_hash):
+        raise HTTPException(status_code=403, detail="Current password is incorrect")
+    user.password_hash = password_hash(new_pass)
+    token = make_jwt({"sub": user.id, "team_id": claims.team_id, "role": claims.role}, settings.jwt_secret, settings.jwt_ttl_seconds)
+    _set_jwt_cookie(response, token)
+    logger.info("auth:change_password user=%s", user.id)
+    return {"status": "ok"}
 
 
 def current_claims(request: Request):
@@ -308,11 +401,11 @@ def require_claims(request: Request):
 
 
 def require_project_access(request: Request, project_id: str, minimum_role: str = "viewer") -> None:
+    if settings.disable_auth:
+        return
     claims = current_claims(request)
     if not claims:
-        if settings.production:
-            raise HTTPException(status_code=401, detail="Authentication required")
-        return
+        raise HTTPException(status_code=401, detail="Authentication required")
     require_role(claims.role, minimum_role)
     project = STORE.get_project(project_id)
     if project and project.team_id and project.team_id != claims.team_id:
@@ -337,14 +430,15 @@ def bootstrap_tenant(request: BootstrapTenantRequest) -> dict:
 
 
 @app.post("/api/v1/usage")
-def record_usage(request: RecordUsageRequest) -> dict:
+def record_usage(body: RecordUsageRequest, request: Request) -> dict:
+    require_claims(request)
     event = STORE.record_usage_event(
         UsageEvent(
             id=new_id("usage"),
-            subject_id=request.subject_id,
-            kind=request.kind,
-            quantity=request.quantity,
-            metadata=request.metadata,
+            subject_id=body.subject_id,
+            kind=body.kind,
+            quantity=body.quantity,
+            metadata=body.metadata,
             created_at=utc_now(),
         )
     )
@@ -369,6 +463,33 @@ def rate_limit_status(key: str = "default") -> dict:
     return result
 
 
+@app.patch("/api/v1/settings/team")
+def update_team_settings(body: dict, request: Request) -> dict:
+    claims = require_claims(request)
+    team = STORE.get_team(claims.team_id)
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    if "name" in body and body["name"]:
+        team.name = body["name"]
+        STORE.save_team(team)
+    return {"status": "updated", "team": {"id": team.id, "name": team.name}}
+
+
+@app.patch("/api/v1/settings/notifications")
+def update_notification_prefs(body: dict, request: Request) -> dict:
+    require_claims(request)
+    return {"status": "saved", "preferences": body}
+
+
+@app.get("/api/v1/billing/plans")
+def list_billing_plans() -> list[dict]:
+    return [
+        {"tier": "free", "name": "Free", "desc": "Basic research briefs and project memory.", "price": "\u20B90"},
+        {"tier": "pro", "name": "Pro", "desc": "More runs, PDF uploads, better models.", "price": "\u20B9999/mo"},
+        {"tier": "team", "name": "Team", "desc": "Shared projects, admin controls, collaboration.", "price": "\u20B92,499/mo"},
+    ]
+
+
 @app.post("/api/v1/billing/checkout")
 def billing_checkout(request: BillingCheckoutRequest) -> dict:
     return create_checkout_session(request.team_id, request.tier, request.success_url, request.cancel_url)
@@ -376,7 +497,9 @@ def billing_checkout(request: BillingCheckoutRequest) -> dict:
 
 @app.post("/api/v1/billing/portal")
 def billing_portal(team_id: str, return_url: str = "http://127.0.0.1:8000/app") -> dict:
-    return create_portal_session(team_id, return_url)
+    subscriptions = STORE.list_subscriptions(team_id)
+    customer_id = subscriptions[0].stripe_customer_id if subscriptions else ""
+    return create_portal_session(customer_id, return_url)
 
 
 @app.post("/api/v1/billing/webhook")
@@ -391,6 +514,7 @@ async def billing_webhook(request: Request) -> dict:
     if not subscription:
         raise HTTPException(status_code=404, detail="Subscription not found for webhook")
     updated = apply_webhook(event, subscription)
+    STORE.save_subscription(updated)
     return {"subscription": updated.model_dump(mode="json")}
 
 
@@ -444,6 +568,14 @@ def list_projects() -> list[ResearchProject]:
     return projects
 
 
+@app.delete("/api/projects/{project_id}")
+def delete_project(project_id: str) -> dict:
+    if not STORE.get_project(project_id):
+        raise HTTPException(status_code=404, detail="Project not found")
+    STORE.delete_project(project_id)
+    return {"status": "deleted", "project_id": project_id}
+
+
 @app.post("/api/projects", response_model=ResearchProject)
 def create_project(request: CreateProjectRequest) -> ResearchProject:
     project = ResearchProject(
@@ -456,28 +588,24 @@ def create_project(request: CreateProjectRequest) -> ResearchProject:
 
 
 @app.get("/api/v1/projects", response_model=list[ResearchProject])
-def list_projects_v1(request: Request) -> list[ResearchProject]:
-    claims = current_claims(request)
-    if claims:
-        require_role(claims.role, "viewer")
-        return [project for project in list_projects() if not project.team_id or project.team_id == claims.team_id]
-    if settings.production:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    return list_projects()
+def list_projects_v1(request: Request, skip: int = 0, limit: int = 50) -> list[ResearchProject]:
+    if settings.disable_auth:
+        return list_projects()[skip:skip + limit]
+    claims = require_claims(request)
+    require_role(claims.role, "viewer")
+    projects = [project for project in list_projects() if not project.team_id or project.team_id == claims.team_id]
+    return projects[skip:skip + limit]
 
 
 @app.post("/api/v1/projects", response_model=ResearchProject)
 def create_project_v1(request: CreateProjectRequest, http_request: Request) -> ResearchProject:
-    claims = current_claims(http_request)
-    if claims:
-        require_role(claims.role, "member")
-    elif settings.production:
-        raise HTTPException(status_code=401, detail="Authentication required")
+    if settings.disable_auth:
+        return create_project(request)
+    claims = require_claims(http_request)
+    require_role(claims.role, "member")
     project = create_project(request)
-    if claims:
-        project.team_id = claims.team_id
-        return STORE.save_project(project)
-    return project
+    project.team_id = claims.team_id
+    return STORE.save_project(project)
 
 
 @app.get("/api/projects/{project_id}", response_model=ResearchProject)
@@ -526,6 +654,52 @@ def run_research_question(project_id: str, request: RunQuestionRequest) -> RunQu
     return RunQuestionResponse(project=project, question=question, run=run, brief=brief)
 
 
+@app.post("/api/v1/projects/{project_id}/run")
+def v1_run_question(project_id: str, request: RunQuestionRequest) -> dict:
+    project = STORE.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    job = queue_job("research_pipeline", project_id, {
+        "project_id": project_id,
+        "question": request.question,
+        "max_papers": request.max_papers,
+        "use_memory": request.use_memory,
+    })
+
+    from . import jobs as jobs_module
+    celery_available = len(jobs_module._LOCAL_JOBS) == 0
+
+    if not celery_available:
+        jobs_module._LOCAL_JOBS.clear()
+        result = jobs_module.execute_job(job.model_dump(mode="json"), {
+            "project_id": project_id,
+            "question": request.question,
+            "max_papers": request.max_papers,
+            "use_memory": request.use_memory,
+        })
+        job.status = "completed" if result.get("status") == "completed" else "failed"
+        job.result = result
+        STORE.save_job(job)
+        return {
+            "job_id": job.id,
+            "status": job.status,
+            "result": result,
+        }
+
+    STORE.save_job(job)
+    return {
+        "job_id": job.id,
+        "status": "queued",
+        "message": "Research pipeline queued. Poll GET /api/v1/jobs/{job_id} for status.",
+    }
+
+
+@app.get("/api/projects/{project_id}/jobs")
+def list_project_jobs(project_id: str) -> list[dict]:
+    return [j.model_dump(mode="json") for j in STORE.list_jobs(project_id)]
+
+
 @app.post("/api/projects/{project_id}/papers/upload", response_model=UploadedPaper)
 async def upload_paper(project_id: str, request: Request, filename: str = "uploaded.pdf") -> UploadedPaper:
     project = STORE.get_project(project_id)
@@ -554,11 +728,11 @@ async def upload_paper(project_id: str, request: Request, filename: str = "uploa
 
 
 @app.get("/api/projects/{project_id}/papers", response_model=list[UploadedPaper])
-def list_papers(project_id: str) -> list[UploadedPaper]:
+def list_papers(project_id: str, skip: int = 0, limit: int = 50) -> list[UploadedPaper]:
     project = STORE.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    return project.uploaded_papers
+    return project.uploaded_papers[skip:skip + limit]
 
 
 @app.get("/api/projects/{project_id}/papers/{paper_id}", response_model=UploadedPaper)
@@ -577,7 +751,16 @@ def get_paper_extractions(project_id: str, paper_id: str) -> PaperExtractionSet:
     return paper.extractions
 
 
-<<<<<<< HEAD
+@app.delete("/api/projects/{project_id}/papers/{paper_id}")
+def delete_paper(project_id: str, paper_id: str) -> dict:
+    project = STORE.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    project.uploaded_papers = [p for p in project.uploaded_papers if p.id != paper_id]
+    STORE.save_project(project)
+    return {"status": "deleted", "paper_id": paper_id}
+
+
 @app.get("/api/connectors/status")
 def connector_status() -> list:
     return ORCHESTRATOR.search_service.connector_status()
@@ -624,8 +807,6 @@ def ranked_paper_chunks(project_id: str, paper_id: str, ranked_by: str | None = 
     return {"paper_id": paper_id, "chunks": paper.chunks, "ranking": ranking}
 
 
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 @app.post("/api/projects/{project_id}/memory", response_model=ResearchProject)
 def add_memory(project_id: str, request: AddMemoryRequest) -> ResearchProject:
     project = STORE.get_project(project_id)
@@ -679,7 +860,7 @@ def promote_memory(project_id: str, request: PromoteMemoryRequest) -> ResearchPr
 
 
 @app.get("/api/projects/{project_id}/memory", response_model=list[MemoryItem])
-def list_memory(project_id: str, kind: str | None = None, q: str | None = None) -> list[MemoryItem]:
+def list_memory(project_id: str, kind: str | None = None, q: str | None = None, skip: int = 0, limit: int = 50) -> list[MemoryItem]:
     project = STORE.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -693,7 +874,17 @@ def list_memory(project_id: str, kind: str | None = None, q: str | None = None) 
             for item in items
             if query in item.content.lower() or any(query in tag.lower() for tag in item.tags)
         ]
-    return items
+    return items[skip:skip + limit]
+
+
+@app.delete("/api/projects/{project_id}/memory/{memory_id}")
+def delete_memory(project_id: str, memory_id: str) -> dict:
+    project = STORE.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    project.memory = [item for item in project.memory if item.id != memory_id]
+    STORE.save_project(project)
+    return {"status": "deleted", "memory_id": memory_id}
 
 
 @app.post("/api/projects/{project_id}/collections", response_model=ResearchProject)
@@ -830,6 +1021,16 @@ def get_plan_script(project_id: str, plan_id: str) -> PlainTextResponse:
     )
 
 
+@app.delete("/api/projects/{project_id}/experiment-plans/{plan_id}")
+def delete_experiment_plan(project_id: str, plan_id: str) -> dict:
+    project = STORE.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    project.experiment_plans = [p for p in project.experiment_plans if p.id != plan_id]
+    STORE.save_project(project)
+    return {"status": "deleted", "plan_id": plan_id}
+
+
 @app.get("/api/projects/{project_id}/experiment-plans/{plan_id}", response_model=ExperimentPlan)
 def get_plan(project_id: str, plan_id: str) -> ExperimentPlan:
     project = STORE.get_project(project_id)
@@ -957,6 +1158,26 @@ def list_hypotheses(project_id: str) -> list[HypothesisCandidate]:
     return project.hypotheses
 
 
+@app.delete("/api/projects/{project_id}/questions/{question_id}")
+def delete_question(project_id: str, question_id: str) -> dict:
+    project = STORE.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    project.questions = [q for q in project.questions if q.id != question_id]
+    STORE.save_project(project)
+    return {"status": "deleted", "question_id": question_id}
+
+
+@app.delete("/api/projects/{project_id}/briefs/{brief_id}")
+def delete_brief(project_id: str, brief_id: str) -> dict:
+    project = STORE.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    project.briefs = [b for b in project.briefs if b.id != brief_id]
+    STORE.save_project(project)
+    return {"status": "deleted", "brief_id": brief_id}
+
+
 @app.get("/api/projects/{project_id}/briefs/{brief_id}")
 def get_brief(project_id: str, brief_id: str):
     project = STORE.get_project(project_id)
@@ -988,7 +1209,6 @@ def get_brief_quality(project_id: str, brief_id: str) -> EvidenceQualityReport:
     raise HTTPException(status_code=404, detail="Quality report not found")
 
 
-<<<<<<< HEAD
 @app.get("/api/projects/{project_id}/runs/{run_id}/events")
 def run_events(project_id: str, run_id: str) -> StreamingResponse:
     project = STORE.get_project(project_id)
@@ -1024,8 +1244,6 @@ def evidence_feedback(project_id: str, evidence_id: str, request: EvidenceFeedba
     return STORE.save_project(project)
 
 
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 @app.get("/api/projects/{project_id}/briefs/{brief_id}/export.md", response_class=PlainTextResponse)
 def export_brief(project_id: str, brief_id: str) -> PlainTextResponse:
     project = STORE.get_project(project_id)
@@ -1064,8 +1282,8 @@ def export_brief_tex(project_id: str, brief_id: str) -> PlainTextResponse:
 
 
 @app.post("/api/v1/agents", response_model=ResearchProject)
-def create_agent(request: CreateAgentRequest, project_id: str = "project_demo") -> ResearchProject:
-    project = STORE.get_project(project_id) or create_default_project()
+def create_agent(request: CreateAgentRequest, project_id: str = "") -> ResearchProject:
+    project = STORE.get_project(project_id) if project_id else create_default_project()
     agent = AgentDefinition(
         id=new_id("agent"),
         project_id=project.id,
@@ -1099,7 +1317,7 @@ def create_saved_search(request: CreateSavedSearchRequest, http_request: Request
 
 
 @app.post("/api/v1/agent-runs/{run_id}/step", response_model=ResearchProject)
-def run_agent_step(run_id: str, request: RunAgentStepRequest, http_request: Request, project_id: str = "project_demo") -> ResearchProject:
+def run_agent_step(run_id: str, request: RunAgentStepRequest, http_request: Request, project_id: str = "") -> ResearchProject:
     require_project_access(http_request, project_id, "member")
     project = STORE.get_project(project_id)
     if not project:
@@ -1130,7 +1348,7 @@ def run_agent_step(run_id: str, request: RunAgentStepRequest, http_request: Requ
 
 
 @app.post("/api/v1/agent-runs/{run_id}/sandbox", response_model=ResearchProject)
-def run_agent_sandbox(run_id: str, request: SandboxRunRequest, http_request: Request, project_id: str = "project_demo") -> ResearchProject:
+def run_agent_sandbox(run_id: str, request: SandboxRunRequest, http_request: Request, project_id: str = "") -> ResearchProject:
     require_project_access(http_request, project_id, "member")
     project = STORE.get_project(project_id)
     if not project:
@@ -1151,22 +1369,22 @@ def run_agent_sandbox(run_id: str, request: SandboxRunRequest, http_request: Req
 
 
 @app.post("/api/v1/agents/{agent_id}/pause", response_model=ResearchProject)
-def pause_agent(agent_id: str, project_id: str = "project_demo") -> ResearchProject:
+def pause_agent(agent_id: str, project_id: str = "") -> ResearchProject:
     return set_agent_status(project_id, agent_id, "paused")
 
 
 @app.post("/api/v1/agents/{agent_id}/resume", response_model=ResearchProject)
-def resume_agent_status(agent_id: str, project_id: str = "project_demo") -> ResearchProject:
+def resume_agent_status(agent_id: str, project_id: str = "") -> ResearchProject:
     return set_agent_status(project_id, agent_id, "active")
 
 
 @app.post("/api/v1/agents/{agent_id}/stop", response_model=ResearchProject)
-def stop_agent(agent_id: str, project_id: str = "project_demo") -> ResearchProject:
+def stop_agent(agent_id: str, project_id: str = "") -> ResearchProject:
     return set_agent_status(project_id, agent_id, "stopped")
 
 
 @app.post("/api/v1/agent-runs/{run_id}/approve", response_model=ResearchProject)
-def approve_agent_run(run_id: str, http_request: Request, project_id: str = "project_demo") -> ResearchProject:
+def approve_agent_run(run_id: str, http_request: Request, project_id: str = "") -> ResearchProject:
     require_project_access(http_request, project_id, "member")
     project = STORE.get_project(project_id)
     if not project:
@@ -1192,7 +1410,7 @@ def approve_agent_run(run_id: str, http_request: Request, project_id: str = "pro
 
 
 @app.get("/api/v1/agent-runs/{run_id}/status")
-def agent_run_status(run_id: str, request: Request, project_id: str = "project_demo") -> dict:
+def agent_run_status(run_id: str, request: Request, project_id: str = "") -> dict:
     require_project_access(request, project_id, "viewer")
     project = STORE.get_project(project_id)
     if not project:
@@ -1204,7 +1422,7 @@ def agent_run_status(run_id: str, request: Request, project_id: str = "project_d
 
 
 @app.get("/api/v1/agent-runs/{run_id}/audit")
-def agent_run_audit(run_id: str, request: Request, project_id: str = "project_demo") -> dict:
+def agent_run_audit(run_id: str, request: Request, project_id: str = "") -> dict:
     require_project_access(request, project_id, "viewer")
     project = STORE.get_project(project_id)
     if not project:
@@ -1254,7 +1472,7 @@ def resolve_experiment_plan(project: ResearchProject, plan_id: str | None) -> Ex
 
 def create_default_project() -> ResearchProject:
     project = ResearchProject(
-        id="project_demo",
+        id=new_id("project"),
         name="AI Research OS Demo",
         description="A starter workspace for citation-grounded literature investigation.",
         created_at=utc_now(),
@@ -1434,7 +1652,6 @@ def build_memory_from_brief(brief) -> list[MemoryItem]:
     return items
 
 
-<<<<<<< HEAD
 def set_agent_status(project_id: str, agent_id: str, status: str) -> ResearchProject:
     project = STORE.get_project(project_id)
     if not project:
@@ -1460,8 +1677,6 @@ def escape_xml(value: str) -> str:
     )
 
 
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 async def read_upload(request: Request, fallback_filename: str) -> tuple[str, bytes, str]:
     content_type = request.headers.get("content-type", "application/pdf")
     body = await request.body()
@@ -1479,3 +1694,8 @@ async def read_upload(request: Request, fallback_filename: str) -> tuple[str, by
         if part_filename or part.get_param("name", header="content-disposition") in {"file", "paper", "upload"}:
             return part_filename or fallback_filename, payload, part.get_content_type() or "application/pdf"
     return fallback_filename, b"", content_type
+
+
+FRONTEND_DIR = BASE_DIR / "frontend" / "out"
+if FRONTEND_DIR.exists():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

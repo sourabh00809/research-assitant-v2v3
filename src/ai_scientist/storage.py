@@ -9,53 +9,44 @@ from typing import Iterable, TypeVar
 from pydantic import BaseModel
 
 from .models import (
-<<<<<<< HEAD
-    AgentDefinition,
     AgentDecision,
-    AgentRunRecord,
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
+    AgentDefinition,
     AgentRun,
+    AgentRunRecord,
     AssumptionItem,
     BaselineMention,
     DatasetMention,
     DocumentChunk,
     EvidenceQualityReport,
-    ExtractionArtifact,
-    ExtractedClaim,
+    ExecutionArtifact,
     ExperimentPlan,
+    ExtractedClaim,
+    ExtractionArtifact,
     FutureWorkItem,
     HypothesisCandidate,
     IngestionRun,
+    JobRecord,
     LimitationItem,
     MemoryItem,
     MethodologyItem,
     MetricMention,
+    NotificationRecord,
+    ObjectStorageRecord,
     PaperExtractionSet,
     ResearchAnnotation,
     ResearchBrief,
     ResearchProject,
     ResearchQuestion,
     ResearchTask,
-<<<<<<< HEAD
     SavedSearch,
     SourceCollection,
-    ExecutionArtifact,
-    JobRecord,
-    ObjectStorageRecord,
-    NotificationRecord,
-    TenantUser,
+    SubscriptionRecord,
     Team,
     TeamMembership,
-    ProjectMembership,
-    SubscriptionRecord,
-    UsageEvent,
-=======
-    SourceCollection,
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
+    TenantUser,
     UploadedPaper,
+    UsageEvent,
 )
-
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
@@ -83,6 +74,11 @@ class SQLiteStore:
             with self._connect() as conn:
                 self._save_project(conn, project)
         return project
+
+    def delete_project(self, project_id: str) -> None:
+        with self._lock:
+            with self._connect() as conn:
+                conn.execute("delete from projects where id = ?", (project_id,))
 
     def save_question(self, project_id: str, question: ResearchQuestion) -> ResearchQuestion:
         with self._lock:
@@ -186,7 +182,6 @@ class SQLiteStore:
                 (project_id,),
             ).fetchall()
         return [AgentRun.model_validate(json.loads(row["payload"])) for row in rows]
-<<<<<<< HEAD
 
     def save_tenant_bundle(
         self,
@@ -250,6 +245,28 @@ class SQLiteStore:
         subscriptions = [SubscriptionRecord.model_validate(json.loads(row["payload"])) for row in rows]
         return [item for item in subscriptions if item.team_id == team_id] if team_id else subscriptions
 
+    def get_subscription(self, subscription_id: str) -> SubscriptionRecord | None:
+        with self._connect() as conn:
+            row = conn.execute("select payload from subscriptions where id = ?", (subscription_id,)).fetchone()
+        return SubscriptionRecord.model_validate(json.loads(row["payload"])) if row else None
+
+    def save_subscription(self, subscription: SubscriptionRecord) -> None:
+        with self._lock:
+            with self._connect() as conn:
+                conn.execute(
+                    """
+                    insert into subscriptions (id, team_id, tier, status, created_at, payload)
+                    values (?, ?, ?, ?, ?, ?)
+                    on conflict(id) do update set
+                        team_id = excluded.team_id,
+                        tier = excluded.tier,
+                        status = excluded.status,
+                        created_at = excluded.created_at,
+                        payload = excluded.payload
+                    """,
+                    (subscription.id, subscription.team_id, subscription.tier, subscription.status, subscription.created_at, _dump(subscription)),
+                )
+
     def list_users(self) -> list[TenantUser]:
         with self._connect() as conn:
             rows = conn.execute("select payload from tenant_users order by created_at desc").fetchall()
@@ -268,6 +285,11 @@ class SQLiteStore:
         with self._connect() as conn:
             rows = conn.execute("select payload from teams order by created_at desc").fetchall()
         return [Team.model_validate(json.loads(row["payload"])) for row in rows]
+
+    def save_team(self, team: Team) -> None:
+        with self._lock:
+            with self._connect() as conn:
+                self._insert_global_payload(conn, "teams", team.id, team.created_at, team)
 
     def get_team(self, team_id: str) -> Team | None:
         with self._connect() as conn:
@@ -352,8 +374,6 @@ class SQLiteStore:
             else:
                 rows = conn.execute("select payload from object_storage_records order by created_at desc").fetchall()
         return [ObjectStorageRecord.model_validate(json.loads(row["payload"])) for row in rows]
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path, timeout=30)
@@ -401,7 +421,6 @@ class SQLiteStore:
                 create table if not exists experiment_plans (
                     id text primary key,
                     project_id text not null,
-<<<<<<< HEAD
                     hypothesis_id text,
                     status text,
                     title text,
@@ -411,8 +430,6 @@ class SQLiteStore:
                     ablation_config text,
                     validation_plan text,
                     generated_script text,
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
                     created_at text not null,
                     payload text not null
                 );
@@ -495,7 +512,6 @@ class SQLiteStore:
                     source_id text not null,
                     kind text not null,
                     created_at text not null,
-<<<<<<< HEAD
                     payload text not null
                 );
                 create table if not exists tenant_users (
@@ -601,14 +617,11 @@ class SQLiteStore:
                     backend text not null,
                     uri text not null,
                     created_at text not null,
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
                     payload text not null
                 );
                 """
             )
             self._ensure_column(conn, "uploaded_papers", "created_at text")
-<<<<<<< HEAD
             self._ensure_column(conn, "experiment_plans", "hypothesis_id text")
             self._ensure_column(conn, "experiment_plans", "status text")
             self._ensure_column(conn, "experiment_plans", "title text")
@@ -618,8 +631,6 @@ class SQLiteStore:
             self._ensure_column(conn, "experiment_plans", "ablation_config text")
             self._ensure_column(conn, "experiment_plans", "validation_plan text")
             self._ensure_column(conn, "experiment_plans", "generated_script text")
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
             self._ensure_column(conn, "document_chunks", "created_at text")
             self._ensure_column(conn, "document_chunks", "payload text")
             self._ensure_column(conn, "ingestion_runs", "payload text")
@@ -643,11 +654,7 @@ class SQLiteStore:
         self._replace_payloads(conn, "questions", project.id, project.questions)
         self._replace_payloads(conn, "briefs", project.id, project.briefs)
         self._replace_payloads(conn, "memory", project.id, project.memory)
-<<<<<<< HEAD
         self._replace_experiment_plans(conn, project.id, project.experiment_plans)
-=======
-        self._replace_payloads(conn, "experiment_plans", project.id, project.experiment_plans)
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
         self._replace_payloads(conn, "hypotheses", project.id, project.hypotheses)
         self._replace_payloads(conn, "tasks", project.id, project.tasks)
         self._replace_payloads(conn, "source_collections", project.id, project.source_collections)
@@ -658,10 +665,7 @@ class SQLiteStore:
                 reports.append(brief.quality_report)
         self._replace_payloads(conn, "quality_reports", project.id, reports)
         self._replace_agent_runs(conn, project.id, getattr(project, "agent_runs", []))
-<<<<<<< HEAD
         self._replace_autonomous_artifacts(conn, project)
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
         conn.execute("delete from uploaded_papers where project_id = ?", (project.id,))
         conn.execute("delete from document_chunks where project_id = ?", (project.id,))
         conn.execute("delete from ingestion_runs where project_id = ?", (project.id,))
@@ -688,14 +692,11 @@ class SQLiteStore:
             project.uploaded_papers = self._list_uploaded_papers(conn, project_id)
             project.agent_runs = self._list_agent_runs(conn, project_id)
             project.quality_reports = self._list_payloads(conn, "quality_reports", project_id, EvidenceQualityReport)
-<<<<<<< HEAD
             project.autonomous_agents = self._list_payloads(conn, "autonomous_agents", project_id, AgentDefinition)
             project.autonomous_agent_runs = self._list_agent_run_records(conn, project_id)
             project.saved_searches = self._list_payloads(conn, "saved_searches", project_id, SavedSearch)
             project.notifications = self._list_payloads(conn, "notifications", project_id, NotificationRecord)
             project.execution_artifacts = self._list_payloads(conn, "execution_artifacts", project_id, ExecutionArtifact)
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
         return project
 
     def _artifact_count(self, conn: sqlite3.Connection, project_id: str) -> int:
@@ -712,15 +713,12 @@ class SQLiteStore:
             "agent_runs",
             "quality_reports",
             "extracted_artifacts",
-<<<<<<< HEAD
             "autonomous_agents",
             "autonomous_agent_runs",
             "agent_decisions",
             "saved_searches",
             "notifications",
             "execution_artifacts",
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
         ]
         return sum(conn.execute(f"select count(*) as count from {table} where project_id = ?", (project_id,)).fetchone()["count"] for table in tables)
 
@@ -730,7 +728,6 @@ class SQLiteStore:
             created_at = getattr(item, "created_at", "")
             self._insert_payload(conn, table, item.id, project_id, created_at, item)
 
-<<<<<<< HEAD
     def _replace_experiment_plans(self, conn: sqlite3.Connection, project_id: str, items: Iterable[ExperimentPlan]) -> None:
         conn.execute("delete from experiment_plans where project_id = ?", (project_id,))
         for plan in items:
@@ -825,63 +822,6 @@ class SQLiteStore:
         for chunk in paper.chunks:
             conn.execute(
                 """
-=======
-    def _insert_payload(self, conn: sqlite3.Connection, table: str, item_id: str, project_id: str, created_at: str, item: BaseModel) -> None:
-        conn.execute(
-            f"""
-            insert into {table} (id, project_id, created_at, payload)
-            values (?, ?, ?, ?)
-            on conflict(id) do update set
-                project_id = excluded.project_id,
-                created_at = excluded.created_at,
-                payload = excluded.payload
-            """,
-            (item_id, project_id, created_at, _dump(item)),
-        )
-
-    def _list_payloads(self, conn: sqlite3.Connection, table: str, project_id: str, model: type[ModelT]) -> list[ModelT]:
-        rows = conn.execute(
-            f"select payload from {table} where project_id = ? order by created_at desc",
-            (project_id,),
-        ).fetchall()
-        return [model.model_validate(json.loads(row["payload"])) for row in rows]
-
-    def _save_uploaded_paper(self, conn: sqlite3.Connection, project_id: str, paper: UploadedPaper) -> None:
-        conn.execute(
-            """
-            insert into uploaded_papers
-            (id, project_id, title, filename, source_type, status, page_count, chunk_count, created_at, payload)
-            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            on conflict(id) do update set
-                title = excluded.title,
-                filename = excluded.filename,
-                source_type = excluded.source_type,
-                status = excluded.status,
-                page_count = excluded.page_count,
-                chunk_count = excluded.chunk_count,
-                created_at = excluded.created_at,
-                payload = excluded.payload
-            """,
-            (
-                paper.id,
-                project_id,
-                paper.title,
-                paper.filename,
-                paper.source_type,
-                paper.status,
-                paper.page_count,
-                paper.chunk_count,
-                paper.created_at,
-                _dump(paper),
-            ),
-        )
-        conn.execute("delete from document_chunks where project_id = ? and paper_id = ?", (project_id, paper.id))
-        conn.execute("delete from ingestion_runs where project_id = ? and paper_id = ?", (project_id, paper.id))
-        conn.execute("delete from extracted_artifacts where project_id = ? and paper_id = ?", (project_id, paper.id))
-        for chunk in paper.chunks:
-            conn.execute(
-                """
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
                 insert into document_chunks (id, paper_id, project_id, page_number, created_at, text, payload)
                 values (?, ?, ?, ?, ?, ?, ?)
                 """,
@@ -945,11 +885,6 @@ class SQLiteStore:
         return [_load_ingestion_run(row) for row in rows]
 
     def _replace_agent_runs(self, conn: sqlite3.Connection, project_id: str, runs: Iterable[AgentRun]) -> None:
-<<<<<<< HEAD
-=======
-        if not runs:
-            return
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
         conn.execute("delete from agent_runs where project_id = ?", (project_id,))
         for run in runs:
             conn.execute(
@@ -967,7 +902,6 @@ class SQLiteStore:
         ).fetchall()
         return [AgentRun.model_validate(json.loads(row["payload"])) for row in rows]
 
-<<<<<<< HEAD
     def _replace_autonomous_artifacts(self, conn: sqlite3.Connection, project: ResearchProject) -> None:
         project_id = project.id
         for table in ["autonomous_agents", "autonomous_agent_runs", "agent_decisions", "saved_searches", "notifications", "execution_artifacts"]:
@@ -1038,8 +972,6 @@ class SQLiteStore:
                 run.decisions = decisions_by_run[run.id]
         return runs
 
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
     def _save_extraction_artifact(self, conn: sqlite3.Connection, project_id: str, artifact: ExtractionArtifact) -> None:
         conn.execute(
             """
@@ -1072,7 +1004,6 @@ class SQLiteStore:
         columns = {row["name"] for row in conn.execute(f"pragma table_info({table})").fetchall()}
         if column not in columns:
             conn.execute(f"alter table {table} add column {column_definition}")
-<<<<<<< HEAD
 
     def _insert_global_payload(self, conn: sqlite3.Connection, table: str, item_id: str, created_at: str, item: BaseModel) -> None:
         conn.execute(
@@ -1085,21 +1016,16 @@ class SQLiteStore:
             """,
             (item_id, created_at, _dump(item)),
         )
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 
 
 def _dump(model: BaseModel) -> str:
     return json.dumps(model.model_dump(mode="json"))
 
 
-<<<<<<< HEAD
 def _model_or_value(item):
     return item.model_dump(mode="json") if isinstance(item, BaseModel) else item
 
 
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 def _load_chunk(row: sqlite3.Row) -> DocumentChunk:
     if row["payload"]:
         return DocumentChunk.model_validate(json.loads(row["payload"]))

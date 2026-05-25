@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import hashlib
-
+from .config import settings
 from .models import (
     ProjectMembership,
     SubscriptionRecord,
@@ -13,11 +12,10 @@ from .models import (
     utc_now,
 )
 
-
 DEFAULT_LIMITS = {
-    "free": {"agent_runs": 50, "projects": 3, "storage_mb": 250},
-    "pro": {"agent_runs": 1000, "projects": 100, "storage_mb": 10000},
-    "team": {"agent_runs": 5000, "projects": 1000, "storage_mb": 100000},
+    "free": {"agent_runs": settings.limit_free_agent_runs, "projects": settings.limit_free_projects, "storage_mb": settings.limit_free_storage_mb},
+    "pro": {"agent_runs": settings.limit_pro_agent_runs, "projects": settings.limit_pro_projects, "storage_mb": settings.limit_pro_storage_mb},
+    "team": {"agent_runs": settings.limit_team_agent_runs, "projects": settings.limit_team_projects, "storage_mb": settings.limit_team_storage_mb},
 }
 
 
@@ -81,12 +79,16 @@ def usage_summary(subscription: SubscriptionRecord, events: list[UsageEvent]) ->
     }
 
 
-def stripe_webhook_stub(event: dict, subscription: SubscriptionRecord) -> SubscriptionRecord:
+def apply_webhook_event(event: dict, subscription: SubscriptionRecord) -> SubscriptionRecord:
     data = event.get("data", {}).get("object", {}) if isinstance(event.get("data"), dict) else {}
     if data.get("customer"):
         subscription.stripe_customer_id = str(data["customer"])
     if data.get("id") and "subscription" in event.get("type", ""):
         subscription.stripe_subscription_id = str(data["id"])
+    metadata = data.get("metadata", {}) or {}
+    tier = metadata.get("tier", "")
+    if tier in {"free", "pro", "team"}:
+        subscription.tier = tier
     event_type = event.get("type", "")
     if event_type.endswith("deleted"):
         subscription.status = "cancelled"
@@ -95,10 +97,6 @@ def stripe_webhook_stub(event: dict, subscription: SubscriptionRecord) -> Subscr
     elif event_type:
         subscription.status = "active"
     return subscription
-
-
-def password_hash(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def can_edit(role: str) -> bool:

@@ -670,18 +670,14 @@ function qualitySection(report) {
         <li>Missing baselines: ${escapeHtml((report.missing_baselines || []).length)}</li>
         <li>Missing metrics: ${escapeHtml((report.missing_metrics || []).length)}</li>
         <li>Missing validation: ${escapeHtml((report.missing_statistical_validation || []).length)}</li>
-<<<<<<< HEAD
         <li>Retrieval quality: ${escapeHtml(report.hybrid_hits || 0)} hybrid, ${escapeHtml(report.semantic_hits || 0)} semantic, ${escapeHtml(report.keyword_hits || 0)} keyword-only</li>
         <li>Embedding coverage: ${escapeHtml(Math.round((report.embedding_coverage || 0) * 100))}%</li>
         <li>Connectors used: ${escapeHtml((report.connectors_used || []).join(", ") || "none")}</li>
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
       </ul>
     </div>
   `;
 }
 
-<<<<<<< HEAD
 function memoryRelevanceSection(scores) {
   if (!scores.length) return "";
   return `
@@ -715,24 +711,17 @@ function renderConnectors() {
       )
       .join("") || `<div class="empty">Connector status unavailable.</div>`;
 }
-
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 function countExtractions(extractions) {
   if (!extractions) return 0;
   return Object.values(extractions).reduce((total, items) => total + (Array.isArray(items) ? items.length : 0), 0);
 }
 
-<<<<<<< HEAD
 function formatRecommendation(item) {
   if (typeof item === "string") return item;
   const name = item.name || item.title || "item";
   const detail = [item.source, item.reference, item.formula, item.rationale].filter(Boolean).join(" · ");
   return detail ? `${name} — ${detail}` : name;
 }
-
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 function memoryKindForEvidence(kind) {
   if (["claim", "method", "dataset", "metric", "baseline"].includes(kind)) return kind;
   if (kind === "limitation" || kind === "future_work" || kind === "assumption") return "gap";

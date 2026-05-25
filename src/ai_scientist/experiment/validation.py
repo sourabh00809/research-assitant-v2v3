@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 SNIPPETS = {
     "bootstrap_ci": """
 def bootstrap_ci(values, iterations=1000, alpha=0.05, seed=13):
@@ -27,17 +26,33 @@ def normal_ci(values, z=1.96):
 """,
     "paired_t_test": """
 def paired_t_test(a, b):
-    from statistics import mean
-    diffs = [x - y for x, y in zip(a, b)]
-    return {"mean_difference": mean(diffs) if diffs else 0.0, "note": "Use scipy.stats.ttest_rel when scipy is available."}
+    try:
+        from scipy import stats  # type: ignore
+        result = stats.ttest_rel(a, b)
+        from statistics import mean
+        return {"statistic": float(result.statistic), "p_value": float(result.pvalue), "mean_difference": mean(a) - mean(b), "method": "scipy"}
+    except ImportError:
+        from statistics import mean
+        diffs = [x - y for x, y in zip(a, b)]
+        return {"mean_difference": mean(diffs) if diffs else 0.0, "note": "scipy not available"}
 """,
     "wilcoxon": """
 def wilcoxon_test(a, b):
-    return {"note": "Use scipy.stats.wilcoxon(a, b) for non-parametric paired comparisons."}
+    try:
+        from scipy import stats  # type: ignore
+        result = stats.wilcoxon(a, b)
+        return {"statistic": float(result.statistic), "p_value": float(result.pvalue), "method": "scipy"}
+    except ImportError:
+        return {"note": "scipy not available"}
 """,
     "anova": """
 def anova_test(*groups):
-    return {"groups": len(groups), "note": "Use scipy.stats.f_oneway(*groups) when scipy is available."}
+    try:
+        from scipy import stats  # type: ignore
+        result = stats.f_oneway(*groups)
+        return {"statistic": float(result.statistic), "p_value": float(result.pvalue), "groups": len(groups), "method": "scipy"}
+    except ImportError:
+        return {"groups": len(groups), "note": "scipy not available"}
 """,
     "mcnemar": """
 def mcnemar_test(table):

@@ -2,10 +2,15 @@ __pycache__/
 *.pyc
 .pytest_cache/
 pytest-cache-files-*/
-data/app_state.json
-data/*.db
-data/*.db-journal
-data/*.db-shm
-data/*.db-wal
+data/
 storage/
 .env
+*.egg-info/
+.coverage*
+htmlcov/
+
+# frontend
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+frontend/out/

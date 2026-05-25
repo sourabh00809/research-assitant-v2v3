@@ -3,7 +3,7 @@ from __future__ import annotations
 from .config import settings
 
 try:
-    from celery import Celery  # type: ignore
+    from celery import Celery
 
     celery_app = Celery("ai_scientist", broker=settings.redis_url, backend=settings.redis_url)
     celery_app.conf.beat_schedule = {
@@ -12,17 +12,26 @@ try:
             "schedule": 60.0,
         }
     }
+    celery_app.conf.task_acks_late = True
+    celery_app.conf.task_reject_on_worker_lost = True
+    celery_app.conf.result_expires = 86400
 except Exception:
     celery_app = None
 
 
 if celery_app:
 
-    @celery_app.task(name="ai_scientist.jobs.execute_job")
-    def execute_job(job_payload: dict, payload: dict | None = None) -> dict:
+    @celery_app.task(name="ai_scientist.jobs.execute_job", bind=True, max_retries=3, default_retry_delay=10)
+    def execute_job(self, job_payload: dict, payload: dict | None = None) -> dict:
         from .jobs import execute_job as run
 
-        return run(job_payload, payload or {})
+        try:
+            return run(job_payload, payload or {})
+        except Exception as exc:
+            try:
+                self.retry(exc=exc)
+            except Exception:
+                return {"status": "failed", "error": str(exc)}
 
     @celery_app.task(name="ai_scientist.celery_app.run_scheduled_agents")
     def run_scheduled_agents() -> dict:

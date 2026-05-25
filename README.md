@@ -30,13 +30,10 @@ This implementation focuses on the first vertical slice from the product plan:
 - single-user password gate
 - Docker Compose deployment files
 - V1.1 research intelligence: structured paper extractions, evidence quality reports, memory promotion, and richer research graph relationships
-<<<<<<< HEAD
 - V1.2 retrieval and RAG upgrade: deterministic local embeddings, hybrid semantic/keyword retrieval, connector status, PubMed metadata support, source deduplication, memory relevance scoring, chunk ranking, and retrieval transparency badges
 - V1.3 Experiment Planning Pro: structured experiment plans, domain templates, dataset/baseline/metric recommendations, validation helpers, generated evaluation scripts, and planner API/UI surfaces
 - V1.4 workspace scaffold: `/app` Next.js export placeholder, frontend source scaffold, SSE run events, evidence feedback, graph exports, and PDF/TeX export fallbacks
 - V2/V3 foundations: migration command, normalized SaaS tenant/usage/subscription persistence, autonomous agent registry and workflow APIs, saved searches, notifications, audit trail records, execution artifacts, and a safe local sandbox fallback
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 
 The app uses FastAPI and a static browser UI. The backend API is intentionally clean enough for a future Next.js frontend to replace the static UI.
 

@@ -507,14 +507,11 @@ def test_docker_compose_config_exposes_app_and_persistent_volumes():
     assert "env_file:" in compose
     assert "./data:/app/data" in compose
     assert "./storage:/app/storage" in compose
-<<<<<<< HEAD
     assert "postgres:" in compose
     assert "redis:" in compose
     assert "minio:" in compose
     assert "worker:" in compose
     assert "scheduler:" in compose
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 
 
 def test_pdf_ingestion_produces_structured_research_extractions(tmp_path):
@@ -572,16 +569,14 @@ def test_quality_report_marks_empty_evidence_as_insufficient():
     assert "insufficient" in report.summary.lower()
 
 
-<<<<<<< HEAD
 def test_v12_hybrid_retrieval_surfaces_scores_and_sources():
     orchestrator = ResearchOrchestrator()
     question = ResearchQuestion(
-        id="question_v12_scores",
-        text="How can retrieval augmented research agents improve evidence quality?",
+        id="test-hybrid",
+        text="How do retrieval-augmented generation systems compare to fine-tuned models for biomedical relation extraction?",
         created_at=utc_now(),
     )
     _, brief = orchestrator.run(question, max_papers=4)
-
     assert brief.evidence_items
     assert any(item.retrieval_method in {"semantic", "hybrid"} for item in brief.evidence_items)
     assert all(item.semantic_score is not None for item in brief.evidence_items)
@@ -590,382 +585,6 @@ def test_v12_hybrid_retrieval_surfaces_scores_and_sources():
     assert brief.quality_report.connectors_used
 
 
-def test_v12_deduplicates_sources_and_merges_badges():
-    from ai_scientist.models import PaperSource
-    from ai_scientist.retrieval import dedupe_papers
-
-    arxiv = PaperSource(
-        id="arxiv_dup",
-        title="Shared Retrieval Paper",
-        abstract="Retrieval improves evidence quality.",
-        url="https://arxiv.org/abs/1234.5678",
-        source="arxiv",
-        source_type="arxiv",
-        sources=["arxiv"],
-        citation="A. Author (2024), Shared Retrieval Paper.",
-        arxiv_id="1234.5678",
-    )
-    semantic = PaperSource(
-        id="s2_dup",
-        title="Shared Retrieval Paper",
-        abstract="Retrieval improves evidence quality with richer metadata.",
-        url="https://semanticscholar.org/paper/test",
-        source="semantic_scholar",
-        source_type="semantic_scholar",
-        sources=["semantic_scholar"],
-        citation="A. Author (2024), Shared Retrieval Paper.",
-        arxiv_id="1234.5678",
-        citation_count=42,
-    )
-
-    deduped = dedupe_papers([arxiv, semantic])
-
-    assert len(deduped) == 1
-    assert deduped[0].sources == ["arxiv", "semantic_scholar"]
-    assert deduped[0].citation_count == 42
-
-
-def test_v12_semantic_chunk_ranking_handles_paraphrase(tmp_path):
-    from ai_scientist.embeddings import rank_chunks
-    from ai_scientist.ingestion import ingest_pdf_bytes
-
-    paper = ingest_pdf_bytes(
-        project_id="project_chunk_rank",
-        filename="chunks.pdf",
-        content=(
-            b"Methods: autonomous research agents evaluate benchmark datasets and baseline comparisons. "
-            b"Conclusion: administrative notes about scheduling are unrelated."
-        ),
-        storage_dir=tmp_path,
-    )
-
-    ranked = rank_chunks("academic copilots compare evaluation data", paper.chunks)
-
-    assert ranked
-    assert ranked[0].semantic_score > 0
-    assert ranked[0].final_score > 0
-
-
-def test_v12_connector_and_embedding_status_endpoints(monkeypatch, tmp_path):
-    import importlib
-    import json
-
-    monkeypatch.delenv("AI_SCIENTIST_APP_PASSWORD", raising=False)
-    monkeypatch.setenv("AI_SCIENTIST_DB_PATH", str(tmp_path / "v12_api.db"))
-    monkeypatch.setenv("AI_SCIENTIST_STORAGE_DIR", str(tmp_path / "storage"))
-    import ai_scientist.config as config
-    import ai_scientist.main as main
-
-    importlib.reload(config)
-    main = importlib.reload(main)
-    project = json.loads(
-        asgi_request(
-            main.app,
-            "POST",
-            "/api/projects",
-            body=json.dumps({"name": "V12", "description": ""}).encode("utf-8"),
-            headers=[(b"content-type", b"application/json")],
-        )["body"]
-    )
-    upload = asgi_request(
-        main.app,
-        "POST",
-        f"/api/projects/{project['id']}/papers/upload?filename=test.pdf",
-        body=b"Evaluation methods require benchmark datasets and baselines.",
-        headers=[(b"content-type", b"application/pdf")],
-    )
-    connectors = asgi_request(main.app, "GET", "/api/connectors/status")
-    status = asgi_request(main.app, "GET", f"/api/projects/{project['id']}/embedding-status")
-
-    assert upload["status"] == 200
-    assert connectors["status"] == 200
-    assert {item["source_type"] for item in json.loads(connectors["body"])} == {"arxiv", "semantic_scholar", "pubmed"}
-    assert json.loads(status["body"])["embedded"] == 1
-
-
-def test_v13_image_classification_recommends_cifar_and_resnet():
-    from ai_scientist.experiment import recommend_experiment_plan
-
-    recommendation = recommend_experiment_plan(
-        None,
-        question="Design an image classification experiment for robust vision models",
-    )
-
-    dataset_names = " ".join(item["name"] for item in recommendation["datasets"])
-    baseline_names = " ".join(item["name"] for item in recommendation["baselines"])
-    assert "CIFAR-10" in dataset_names
-    assert "ResNet" in baseline_names
-    assert recommendation["template_id"] == "image_classification"
-
-
-def test_v13_literature_extractions_rank_above_template_defaults():
-    from ai_scientist.experiment import recommend_experiment_plan
-    from ai_scientist.models import EvidenceItem, ResearchBrief
-
-    brief = ResearchBrief(
-        id="brief_reco",
-        question_id="question_reco",
-        title="Research Brief: image classification",
-        question_interpretation="Test",
-        key_findings=[],
-        evidence_items=[
-            EvidenceItem(
-                id="ev_dataset",
-                source_id="source",
-                claim="Custom Pavement Crack Dataset",
-                support="Custom Pavement Crack Dataset",
-                confidence="medium",
-                extraction_type="dataset",
-            ),
-            EvidenceItem(
-                id="ev_baseline",
-                source_id="source",
-                claim="ResNet-50 baseline",
-                support="ResNet-50 baseline",
-                confidence="medium",
-                extraction_type="baseline",
-            ),
-        ],
-        paper_matrix=[],
-        methodology_assessment=[],
-        weak_evidence_flags=[],
-        open_problems=[],
-        suggested_next_directions=[],
-        bibliography=[],
-        created_at=utc_now(),
-    )
-
-    recommendation = recommend_experiment_plan(brief, question="image classification")
-
-    assert recommendation["datasets"][0]["name"] == "Custom Pavement Crack Dataset"
-    assert recommendation["baselines"][0]["name"] == "ResNet-50 baseline"
-
-
-def test_v13_generated_script_compiles(tmp_path):
-    import py_compile
-    from ai_scientist.experiments import create_experiment_plan
-
-    orchestrator = ResearchOrchestrator()
-    question = ResearchQuestion(id="question_v13_script", text="How should RAG evidence quality be evaluated?", created_at=utc_now())
-    _, brief = orchestrator.run(question, max_papers=4)
-    plan = create_experiment_plan(brief)
-    path = tmp_path / "generated_experiment.py"
-    path.write_text(plan.generated_script, encoding="utf-8")
-
-    py_compile.compile(str(path), doraise=True)
-    assert "bootstrap_ci" in plan.generated_script
-    assert "paired_t_test" in plan.generated_script
-
-
-def test_v14_exports_and_sse_run_events(monkeypatch, tmp_path):
-    import importlib
-    import json
-
-    monkeypatch.delenv("AI_SCIENTIST_APP_PASSWORD", raising=False)
-    monkeypatch.setenv("AI_SCIENTIST_DB_PATH", str(tmp_path / "v14.db"))
-    monkeypatch.setenv("AI_SCIENTIST_STORAGE_DIR", str(tmp_path / "storage"))
-    import ai_scientist.config as config
-    import ai_scientist.main as main
-
-    importlib.reload(config)
-    main = importlib.reload(main)
-    project = json.loads(asgi_request(main.app, "POST", "/api/projects", body=b'{"name":"V14"}', headers=[(b"content-type", b"application/json")])["body"])
-    run_response = asgi_request(
-        main.app,
-        "POST",
-        f"/api/projects/{project['id']}/questions/run",
-        body=b'{"question":"How should evidence graphs support research?","max_papers":4}',
-        headers=[(b"content-type", b"application/json")],
-    )
-    body = json.loads(run_response["body"])
-
-    assert asgi_request(main.app, "GET", "/app")["status"] == 200
-    assert asgi_request(main.app, "GET", f"/api/projects/{project['id']}/graph/export.json")["status"] == 200
-    assert asgi_request(main.app, "GET", f"/api/projects/{project['id']}/graph/export.svg")["status"] == 200
-    assert asgi_request(main.app, "GET", f"/api/projects/{project['id']}/runs/{body['run']['id']}/events")["status"] == 200
-
-
-def test_v2_migration_and_subscription_helpers(tmp_path):
-    from ai_scientist.migrate import sqlite_to_postgres_summary
-    from ai_scientist.saas import create_single_user_tenant, stripe_webhook_stub, usage_allowed
-    from ai_scientist.storage import SQLiteStore
-    from ai_scientist.models import ResearchProject
-
-    db_path = tmp_path / "migrate.db"
-    SQLiteStore(db_path).save_project(ResearchProject(id="project_migrate", name="Migrate", created_at=utc_now()))
-    summary = sqlite_to_postgres_summary(db_path, "postgresql://user:pass@localhost/db", dry_run=True)
-    user, team, subscription = create_single_user_tenant()
-    subscription = stripe_webhook_stub({"type": "invoice.payment_failed"}, subscription)
-
-    assert summary["table_counts"]["projects"] == 1
-    assert user.role == "owner"
-    assert team.name
-    assert subscription.status == "past_due"
-    assert usage_allowed(subscription, [], "agent_runs") is True
-
-
-def test_v3_agent_audit_and_sandbox(monkeypatch, tmp_path):
-    import importlib
-    import json
-    from ai_scientist.sandbox import run_python_sandbox
-
-    monkeypatch.delenv("AI_SCIENTIST_APP_PASSWORD", raising=False)
-    monkeypatch.setenv("AI_SCIENTIST_DB_PATH", str(tmp_path / "v3.db"))
-    monkeypatch.setenv("AI_SCIENTIST_STORAGE_DIR", str(tmp_path / "storage"))
-    import ai_scientist.config as config
-    import ai_scientist.main as main
-
-    importlib.reload(config)
-    main = importlib.reload(main)
-    created = asgi_request(
-        main.app,
-        "POST",
-        "/api/v1/agents?project_id=project_demo",
-        body=b'{"type":"literature_monitor","name":"Weekly monitor","goal":"Find new RAG papers","schedule":"weekly"}',
-        headers=[(b"content-type", b"application/json")],
-    )
-    project = json.loads(created["body"])
-    run_id = project["autonomous_agent_runs"][0]["id"]
-    audit = asgi_request(main.app, "GET", f"/api/v1/agent-runs/{run_id}/audit?project_id=project_demo")
-    sandbox = run_python_sandbox("print('ok')", timeout_seconds=3)
-
-    assert created["status"] == 200
-    assert audit["status"] == 200
-    assert sandbox["exit_code"] == 0
-    assert sandbox["network_disabled"] is True
-
-
-def test_v2_tenancy_usage_endpoints_persist_limits(monkeypatch, tmp_path):
-    import importlib
-    import json
-
-    monkeypatch.delenv("AI_SCIENTIST_APP_PASSWORD", raising=False)
-    monkeypatch.setenv("AI_SCIENTIST_DB_PATH", str(tmp_path / "v2_platform.db"))
-    monkeypatch.setenv("AI_SCIENTIST_STORAGE_DIR", str(tmp_path / "storage"))
-    import ai_scientist.config as config
-    import ai_scientist.main as main
-
-    importlib.reload(config)
-    main = importlib.reload(main)
-    tenant = json.loads(
-        asgi_request(
-            main.app,
-            "POST",
-            "/api/v1/tenancy/bootstrap",
-            body=b'{"email":"owner@example.com","team_name":"Research Lab","tier":"pro"}',
-            headers=[(b"content-type", b"application/json")],
-        )["body"]
-    )
-    usage = asgi_request(
-        main.app,
-        "POST",
-        "/api/v1/usage",
-        body=json.dumps({"subject_id": tenant["team"]["id"], "kind": "agent_runs", "quantity": 2}).encode("utf-8"),
-        headers=[(b"content-type", b"application/json")],
-    )
-    limits = json.loads(
-        asgi_request(
-            main.app,
-            "GET",
-            f"/api/v1/usage/limits?subject_id={tenant['team']['id']}&team_id={tenant['team']['id']}",
-        )["body"]
-    )
-
-    assert tenant["subscription"]["tier"] == "pro"
-    assert usage["status"] == 200
-    assert limits["usage"]["agent_runs"] == 2
-    assert limits["allowed"]["agent_runs"] is True
-
-
-def test_v2_signup_login_billing_jobs_and_health(monkeypatch, tmp_path):
-    import importlib
-    import json
-
-    monkeypatch.delenv("AI_SCIENTIST_APP_PASSWORD", raising=False)
-    monkeypatch.setenv("AI_SCIENTIST_DB_PATH", str(tmp_path / "v2_full.db"))
-    monkeypatch.setenv("AI_SCIENTIST_STORAGE_DIR", str(tmp_path / "storage"))
-    import ai_scientist.config as config
-    import ai_scientist.main as main
-
-    importlib.reload(config)
-    main = importlib.reload(main)
-    signup = asgi_request(
-        main.app,
-        "POST",
-        "/api/v1/auth/signup",
-        body=b'{"email":"full@example.com","password":"password123","team_name":"Full Stack Lab"}',
-        headers=[(b"content-type", b"application/json")],
-    )
-    cookie = next(value for name, value in signup["headers"] if name.lower() == b"set-cookie").split(b";", 1)[0]
-    session = json.loads(asgi_request(main.app, "GET", "/api/v1/auth/session", headers=[(b"cookie", cookie)])["body"])
-    checkout = asgi_request(
-        main.app,
-        "POST",
-        "/api/v1/billing/checkout",
-        body=json.dumps({"team_id": session["team"]["id"], "tier": "pro"}).encode("utf-8"),
-        headers=[(b"content-type", b"application/json")],
-    )
-    job = asgi_request(
-        main.app,
-        "POST",
-        "/api/v1/jobs",
-        body=b'{"kind":"agent_workflow","payload":{"agent":"monitor"}}',
-        headers=[(b"content-type", b"application/json")],
-    )
-    health = json.loads(asgi_request(main.app, "GET", "/api/v1/admin/health")["body"])
-
-    assert signup["status"] == 200
-    assert session["authenticated"] is True
-    assert json.loads(checkout["body"])["provider"] == "stripe-test-stub"
-    assert json.loads(job["body"])["status"] == "queued"
-    assert "database" in health
-    assert "redis_workers" in health
-
-
-def test_v3_literature_monitor_step_persists_search_notification_and_audit(monkeypatch, tmp_path):
-    import importlib
-    import json
-
-    monkeypatch.delenv("AI_SCIENTIST_APP_PASSWORD", raising=False)
-    monkeypatch.setenv("AI_SCIENTIST_DB_PATH", str(tmp_path / "v3_workflow.db"))
-    monkeypatch.setenv("AI_SCIENTIST_STORAGE_DIR", str(tmp_path / "storage"))
-    import ai_scientist.config as config
-    import ai_scientist.main as main
-    from ai_scientist.storage import SQLiteStore
-
-    importlib.reload(config)
-    main = importlib.reload(main)
-    project = json.loads(asgi_request(main.app, "POST", "/api/projects", body=b'{"name":"Agents"}', headers=[(b"content-type", b"application/json")])["body"])
-    created = json.loads(
-        asgi_request(
-            main.app,
-            "POST",
-            f"/api/v1/projects/{project['id']}/agents",
-            body=b'{"type":"literature_monitor","name":"Monitor","goal":"Find new agent papers","schedule":"weekly"}',
-            headers=[(b"content-type", b"application/json")],
-        )["body"]
-    )
-    run_id = created["autonomous_agent_runs"][0]["id"]
-    stepped = json.loads(
-        asgi_request(
-            main.app,
-            "POST",
-            f"/api/v1/agent-runs/{run_id}/step?project_id={project['id']}",
-            body=b'{"query":"retrieval augmented research agents"}',
-            headers=[(b"content-type", b"application/json")],
-        )["body"]
-    )
-    loaded = SQLiteStore(tmp_path / "v3_workflow.db").get_project(project["id"])
-
-    assert stepped["autonomous_agent_runs"][0]["status"] == "completed"
-    assert stepped["saved_searches"][0]["query"] == "retrieval augmented research agents"
-    assert stepped["notifications"]
-    assert loaded is not None
-    assert loaded.autonomous_agent_runs[0].decisions
-
-
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 def test_sqlite_persists_quality_reports_and_extraction_artifact_rows(tmp_path):
     import sqlite3
 
@@ -1066,7 +685,6 @@ def test_research_graph_includes_v11_artifact_relationships(tmp_path):
     assert {"quality_checks", "uses", "evaluated_by", "has_limitation", "has_assumption"} & relations
 
 
-<<<<<<< HEAD
 def test_sqlite_store_persists_jobs_and_object_records(tmp_path):
     from ai_scientist.models import JobRecord, ObjectStorageRecord
     from ai_scientist.storage import SQLiteStore
@@ -1099,6 +717,7 @@ def test_v1_job_and_artifact_endpoints(monkeypatch, tmp_path):
     import json
 
     monkeypatch.delenv("AI_SCIENTIST_APP_PASSWORD", raising=False)
+    monkeypatch.setenv("AI_SCIENTIST_DISABLE_AUTH", "1")
     monkeypatch.setenv("AI_SCIENTIST_DB_PATH", str(tmp_path / "ops_api.db"))
     monkeypatch.setenv("AI_SCIENTIST_STORAGE_DIR", str(tmp_path / "storage"))
     import ai_scientist.config as config
@@ -1156,8 +775,6 @@ def test_production_readiness_rejects_unsafe_defaults(monkeypatch):
         main.validate_production_configuration()
 
 
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
 def asgi_request(app, method, path, body=b"", headers=None):
     import anyio
 

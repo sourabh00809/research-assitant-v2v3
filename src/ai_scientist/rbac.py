@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 ROLE_ORDER = {"viewer": 0, "member": 1, "admin": 2, "owner": 3}
 
 

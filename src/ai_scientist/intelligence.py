@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from .models import (
+    AssumptionItem,
     BaselineMention,
     DatasetMention,
     DocumentChunk,
@@ -10,7 +11,6 @@ from .models import (
     EvidenceQualityReport,
     ExtractedClaim,
     FutureWorkItem,
-    AssumptionItem,
     LimitationItem,
     MethodologyItem,
     MetricMention,
@@ -20,7 +20,6 @@ from .models import (
     new_id,
     utc_now,
 )
-
 
 KEYWORDS = {
     "method": ["method", "approach", "system", "model", "framework", "pipeline", "architecture"],
@@ -162,14 +161,11 @@ def build_quality_report(brief_id: str, evidence: list[EvidenceItem], matrix: li
     weak_signals = [f"{row.source_id}: {flag}" for row in matrix for flag in row.quality_flags]
     insufficient = not evidence or len(factual_claims) == 0 or (len(cited) / max(len(evidence), 1)) < 0.5
     coverage = round(len(cited) / max(len(evidence), 1), 3)
-<<<<<<< HEAD
     semantic_hits = len([item for item in evidence if item.retrieval_method == "semantic"])
     keyword_hits = len([item for item in evidence if item.retrieval_method == "keyword"])
     hybrid_hits = len([item for item in evidence if item.retrieval_method == "hybrid"])
     embedded = len([item for item in evidence if item.semantic_score is not None])
     connectors = sorted({item.source_type for item in evidence if item.source_type})
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
     speculative = []
     if insufficient:
         speculative.append("Insufficient extracted evidence; any research directions should be treated as hypotheses to investigate, not conclusions.")
@@ -185,14 +181,11 @@ def build_quality_report(brief_id: str, evidence: list[EvidenceItem], matrix: li
         missing_statistical_validation=dedupe(missing_validation)[:10],
         speculative_conclusions=speculative,
         insufficient_evidence=insufficient,
-<<<<<<< HEAD
         semantic_hits=semantic_hits,
         keyword_hits=keyword_hits,
         hybrid_hits=hybrid_hits,
         embedding_coverage=round(embedded / max(len(evidence), 1), 3),
         connectors_used=connectors,
-=======
->>>>>>> 6a7e9446766ffc975781f6ee2ded51bd711ceb44
         summary=quality_summary(coverage, insufficient, weak_signals),
         created_at=utc_now(),
     )

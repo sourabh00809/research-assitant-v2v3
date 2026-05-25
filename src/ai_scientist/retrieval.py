@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import urllib.parse
@@ -9,8 +10,10 @@ import xml.etree.ElementTree as ET
 from html import unescape
 from typing import Iterable
 
-from .embeddings import VectorSearchService, keyword_score, tokenize
+from .embeddings import VectorSearchService, tokenize
 from .models import ConnectorStatus, DeduplicationRecord, PaperSource, new_id, utc_now
+
+logger = logging.getLogger(__name__)
 
 
 SEED_CORPUS = [
@@ -140,7 +143,8 @@ class SearchService:
             with urllib.request.urlopen(url, timeout=8) as response:
                 payload = response.read()
             root = ET.fromstring(payload)
-        except Exception:
+        except Exception as exc:
+            logger.warning("arXiv search failed: %s", exc)
             return []
 
         ns = {"atom": "http://www.w3.org/2005/Atom"}
@@ -181,7 +185,8 @@ class SearchService:
             request = urllib.request.Request(url, headers={"User-Agent": "ai-scientist-platform-mvp"})
             with urllib.request.urlopen(request, timeout=8) as response:
                 payload = json.loads(response.read().decode("utf-8"))
-        except Exception:
+        except Exception as exc:
+            logger.warning("Semantic Scholar search failed: %s", exc)
             return []
 
         papers: list[PaperSource] = []
@@ -235,7 +240,8 @@ class SearchService:
             )
             with urllib.request.urlopen(fetch_url, timeout=8) as response:
                 root = ET.fromstring(response.read())
-        except Exception:
+        except Exception as exc:
+            logger.warning("PubMed search failed: %s", exc)
             return []
 
         papers: list[PaperSource] = []

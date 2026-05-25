@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 
@@ -34,10 +33,12 @@ class Settings:
         self.sandbox_cpu_quota = int(os.getenv("AI_SCIENTIST_SANDBOX_CPU_QUOTA", "50000"))
         self.sandbox_memory_mb = int(os.getenv("AI_SCIENTIST_SANDBOX_MEMORY_MB", "512"))
         self.worker_concurrency = int(os.getenv("AI_SCIENTIST_WORKER_CONCURRENCY", "2"))
-        self.ai_provider = os.getenv("AI_SCIENTIST_AI_PROVIDER", "deterministic").lower()
-        self.model = os.getenv("AI_SCIENTIST_MODEL", "gpt-4.1-mini")
+        self.ai_provider = os.getenv("AI_SCIENTIST_AI_PROVIDER", "auto").lower()
+        self.model = os.getenv("AI_SCIENTIST_MODEL", "mistralai/Mistral-7B-Instruct-v0.3")
+        self.ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         self.app_password = os.getenv("AI_SCIENTIST_APP_PASSWORD", "")
-        self.live_search = os.getenv("AI_SCIENTIST_LIVE_SEARCH") == "1"
+        self.disable_auth = os.getenv("AI_SCIENTIST_DISABLE_AUTH", "").lower() in {"1", "true", "yes"}
+        self.live_search = os.getenv("AI_SCIENTIST_LIVE_SEARCH", "1") == "1"
         self.embedding_provider = os.getenv("AI_SCIENTIST_EMBEDDING_PROVIDER", "local").lower()
         self.embedding_model = os.getenv("AI_SCIENTIST_EMBEDDING_MODEL", "deterministic-hash-v1")
         self.pubmed_enabled = os.getenv("AI_SCIENTIST_PUBMED_ENABLED", "false").lower() == "true"
@@ -49,6 +50,15 @@ class Settings:
         self.max_papers = int(os.getenv("AI_SCIENTIST_MAX_PAPERS", "6"))
         self.max_chunks = int(os.getenv("AI_SCIENTIST_MAX_CHUNKS", "8"))
         self.public_base_url = os.getenv("AI_SCIENTIST_PUBLIC_BASE_URL", "http://127.0.0.1:8000")
+        self.limit_free_agent_runs = int(os.getenv("AI_SCIENTIST_LIMIT_FREE_AGENT_RUNS", "50"))
+        self.limit_free_projects = int(os.getenv("AI_SCIENTIST_LIMIT_FREE_PROJECTS", "3"))
+        self.limit_free_storage_mb = int(os.getenv("AI_SCIENTIST_LIMIT_FREE_STORAGE_MB", "250"))
+        self.limit_pro_agent_runs = int(os.getenv("AI_SCIENTIST_LIMIT_PRO_AGENT_RUNS", "1000"))
+        self.limit_pro_projects = int(os.getenv("AI_SCIENTIST_LIMIT_PRO_PROJECTS", "100"))
+        self.limit_pro_storage_mb = int(os.getenv("AI_SCIENTIST_LIMIT_PRO_STORAGE_MB", "10000"))
+        self.limit_team_agent_runs = int(os.getenv("AI_SCIENTIST_LIMIT_TEAM_AGENT_RUNS", "5000"))
+        self.limit_team_projects = int(os.getenv("AI_SCIENTIST_LIMIT_TEAM_PROJECTS", "1000"))
+        self.limit_team_storage_mb = int(os.getenv("AI_SCIENTIST_LIMIT_TEAM_STORAGE_MB", "100000"))
 
     @property
     def production(self) -> bool:
@@ -59,6 +69,17 @@ class Settings:
         if self.store_backend:
             return self.store_backend
         return "postgres" if self.production and self.database_url else "sqlite"
+
+    def validate(self) -> None:
+        warnings = []
+        if self.production and self.jwt_secret == "dev-change-me":
+            warnings.append("JWT_SECRET is still set to the default dev value")
+        if self.production and self.app_password == "change-me":
+            warnings.append("APP_PASSWORD is still set to the default dev value")
+        if self.production and not self.cookie_secure:
+            warnings.append("COOKIE_SECURE should be True in production")
+        if warnings:
+            raise RuntimeError("Production configuration warnings:\n" + "\n".join(warnings))
 
 
 settings = Settings()

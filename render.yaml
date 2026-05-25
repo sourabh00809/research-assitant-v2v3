@@ -1,0 +1,51 @@
+databases:
+  - name: research-db
+    plan: free
+    region: oregon
+
+services:
+  - type: web
+    name: research-assistant
+    env: docker
+    region: oregon
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: research-db
+          property: connectionString
+      - key: AI_SCIENTIST_ENV
+        value: production
+      - key: AI_SCIENTIST_STORE_BACKEND
+        value: postgres
+      - key: AI_SCIENTIST_DISABLE_AUTH
+        value: "0"
+      - key: AI_SCIENTIST_AI_PROVIDER
+        value: deterministic
+      - key: AI_SCIENTIST_LIVE_SEARCH
+        value: "0"
+      - key: AI_SCIENTIST_EMBEDDING_PROVIDER
+        value: local
+      - key: AI_SCIENTIST_EMBEDDING_MODEL
+        value: deterministic-hash-v1
+      - key: AI_SCIENTIST_COOKIE_SECURE
+        value: "true"
+      - key: AI_SCIENTIST_COOKIE_SAMESITE
+        value: lax
+      - key: AI_SCIENTIST_JWT_TTL_SECONDS
+        value: "604800"
+      - key: AI_SCIENTIST_STORAGE_BACKEND
+        value: local
+      - key: AI_SCIENTIST_SANDBOX_BACKEND
+        value: disabled
+      - key: AI_SCIENTIST_PUBLIC_BASE_URL
+        value: https://research-assistant.onrender.com
+      - key: AI_SCIENTIST_APP_PASSWORD
+        sync: false
+      - key: AI_SCIENTIST_JWT_SECRET
+        sync: false
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1

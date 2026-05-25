@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..models import ExperimentPlan, ExperimentMetric, ValidationPlan
+from ..models import ExperimentPlan
 from .validation import validation_snippets
 
 

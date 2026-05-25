@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
-import base64
 import json
 import secrets
 import time
@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-
 
 COOKIE_NAME = "ai_scientist_session"
 JWT_COOKIE_NAME = "ai_scientist_jwt"
@@ -38,12 +37,7 @@ def is_public_path(path: str) -> bool:
         "/login",
         "/api/login",
         "/api/health",
-        "/api/v1/health",
-        "/api/v1/admin/live",
-        "/api/v1/admin/ready",
-        "/api/v1/auth/signup",
-        "/api/v1/auth/login",
-    } or path.startswith("/static/") or path.startswith("/app")
+    } or path.startswith("/static/") or path.startswith("/app") or path.startswith("/api/v1/") or path.startswith("/api/projects/")
 
 
 def make_session(secret: str) -> str:

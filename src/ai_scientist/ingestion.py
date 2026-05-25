@@ -60,8 +60,9 @@ def ingest_pdf_bytes(
 
 def extract_pdf_pages(content: bytes) -> list[tuple[int, str]]:
     try:
-        from pypdf import PdfReader  # type: ignore
         from io import BytesIO
+
+        from pypdf import PdfReader  # type: ignore
 
         reader = PdfReader(BytesIO(content))
         pages = []

@@ -16,8 +16,8 @@ from .models import (
     Team,
     TeamMembership,
     TenantUser,
-    UsageEvent,
     UploadedPaper,
+    UsageEvent,
 )
 
 
@@ -39,9 +39,36 @@ class PostgresStore:
         rows = self._fetch_all("select payload from projects order by created_at desc")
         return [ResearchProject.model_validate(row["payload"]) for row in rows]
 
+    def delete_project(self, project_id: str) -> None:
+        self._execute("delete from projects where id = %s", (project_id,))
+
     def get_project(self, project_id: str) -> ResearchProject | None:
         row = self._fetch_one("select payload from projects where id = %s", (project_id,))
         return ResearchProject.model_validate(row["payload"]) if row else None
+
+    def update_project(self, project_id: str, mutator) -> ResearchProject | None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("select payload from projects where id = %s for update", (project_id,))
+                row = cur.fetchone()
+                if not row:
+                    return None
+                project = ResearchProject.model_validate(row["payload"])
+                mutator(project)
+                cur.execute(
+                    """
+                    insert into projects (id, team_id, name, created_at, payload)
+                    values (%s, %s, %s, %s, %s::jsonb)
+                    on conflict(id) do update set
+                        team_id = excluded.team_id,
+                        name = excluded.name,
+                        created_at = excluded.created_at,
+                        payload = excluded.payload
+                    """,
+                    (project.id, project.team_id, project.name, project.created_at, _dump(project)),
+                )
+            conn.commit()
+        return project
 
     def save_project(self, project: ResearchProject) -> ResearchProject:
         self._execute(
@@ -57,6 +84,21 @@ class PostgresStore:
             (project.id, project.team_id, project.name, project.created_at, _dump(project)),
         )
         return project
+
+    def save_question(self, project_id: str, question) -> Any:
+        self.update_project(project_id, lambda p: setattr(p, "questions",
+            [question] + [item for item in p.questions if item.id != question.id]))
+        return question
+
+    def save_brief(self, project_id: str, brief) -> Any:
+        self.update_project(project_id, lambda p: setattr(p, "briefs",
+            [brief] + [item for item in p.briefs if item.id != brief.id]))
+        return brief
+
+    def save_memory_item(self, project_id: str, item) -> Any:
+        self.update_project(project_id, lambda p: setattr(p, "memory",
+            [item] + [existing for existing in p.memory if existing.id != item.id]))
+        return item
 
     def list_document_chunks(self, project_id: str, limit: int = 8) -> list[DocumentChunk]:
         project = self.get_project(project_id)
@@ -78,19 +120,15 @@ class PostgresStore:
         return project.uploaded_papers if project else []
 
     def save_uploaded_paper(self, project_id: str, paper: UploadedPaper) -> UploadedPaper:
-        project = self.get_project(project_id)
-        if not project:
-            return paper
-        project.uploaded_papers = [item for item in project.uploaded_papers if item.id != paper.id]
-        project.uploaded_papers.insert(0, paper)
-        self.save_project(project)
+        def _mutate(p):
+            p.uploaded_papers = [item for item in p.uploaded_papers if item.id != paper.id]
+            p.uploaded_papers.insert(0, paper)
+        self.update_project(project_id, _mutate)
         return paper
 
     def save_agent_run(self, project_id: str, run) -> Any:
-        project = self.get_project(project_id)
-        if project:
-            project.agent_runs = [run] + [item for item in project.agent_runs if item.id != run.id]
-            self.save_project(project)
+        self.update_project(project_id, lambda p: setattr(p, "agent_runs",
+            [run] + [item for item in p.agent_runs if item.id != run.id]))
         return run
 
     def list_agent_runs(self, project_id: str) -> list:
@@ -98,10 +136,8 @@ class PostgresStore:
         return project.agent_runs if project else []
 
     def save_quality_report(self, project_id: str, report: EvidenceQualityReport) -> EvidenceQualityReport:
-        project = self.get_project(project_id)
-        if project:
-            project.quality_reports = [report] + [item for item in project.quality_reports if item.id != report.id]
-            self.save_project(project)
+        self.update_project(project_id, lambda p: setattr(p, "quality_reports",
+            [report] + [item for item in p.quality_reports if item.id != report.id]))
         return report
 
     def get_quality_report(self, project_id: str, report_id: str) -> EvidenceQualityReport | None:
@@ -146,9 +182,15 @@ class PostgresStore:
         row = self._fetch_one("select payload from tenant_users where id = %s", (user_id,))
         return TenantUser.model_validate(row["payload"]) if row else None
 
+    def save_team(self, team: Team) -> None:
+        self._upsert_global("teams", team.id, team.created_at, team)
+
     def get_team(self, team_id: str) -> Team | None:
         row = self._fetch_one("select payload from teams where id = %s", (team_id,))
         return Team.model_validate(row["payload"]) if row else None
+
+    def list_teams(self) -> list[Team]:
+        return [Team.model_validate(row["payload"]) for row in self._fetch_all("select payload from teams order by created_at desc")]
 
     def list_team_memberships(self, user_id: str | None = None, team_id: str | None = None) -> list[TeamMembership]:
         rows = self._fetch_all("select payload from team_memberships order by created_at desc")
@@ -188,6 +230,25 @@ class PostgresStore:
         else:
             rows = self._fetch_all("select payload from subscriptions order by created_at desc")
         return [SubscriptionRecord.model_validate(row["payload"]) for row in rows]
+
+    def get_subscription(self, subscription_id: str) -> SubscriptionRecord | None:
+        row = self._fetch_one("select payload from subscriptions where id = %s", (subscription_id,))
+        return SubscriptionRecord.model_validate(row["payload"]) if row else None
+
+    def save_subscription(self, subscription: SubscriptionRecord) -> None:
+        self._execute(
+            """
+            insert into subscriptions (id, team_id, tier, status, created_at, payload)
+            values (%s, %s, %s, %s, %s, %s::jsonb)
+            on conflict(id) do update set
+                team_id = excluded.team_id,
+                tier = excluded.tier,
+                status = excluded.status,
+                created_at = excluded.created_at,
+                payload = excluded.payload
+            """,
+            (subscription.id, subscription.team_id, subscription.tier, subscription.status, subscription.created_at, _dump(subscription)),
+        )
 
     def save_job(self, job: JobRecord) -> JobRecord:
         self._execute(
