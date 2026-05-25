@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: research-assistant-api
+    name: research-assistant
     env: docker
     region: oregon
     plan: free

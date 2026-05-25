@@ -1,3 +1,14 @@
+FROM node:20-slim AS frontend-builder
+
+WORKDIR /app/frontend
+
+COPY frontend/package*.json ./
+RUN npm ci
+
+COPY frontend/ ./
+RUN npm run build
+
+
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -5,8 +16,12 @@ WORKDIR /app
 ENV PYTHONPATH=/app/src
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL "https://caddyserver.com/api/download?os=linux&arch=amd64" -o /usr/bin/caddy \
+    && chmod +x /usr/bin/caddy
+
+COPY --from=frontend-builder /usr/local/bin/node /usr/local/bin/node
 
 RUN groupadd -r app && useradd -r -g app -d /app -s /sbin/nologin app
 
@@ -18,13 +33,19 @@ RUN pip install --no-cache-dir -e .
 COPY src /app/src
 COPY templates /app/templates
 
+COPY --from=frontend-builder /app/frontend/.next/standalone/ /app/frontend/
+COPY --from=frontend-builder /app/frontend/.next/static/ /app/frontend/.next/static/
+COPY --from=frontend-builder /app/frontend/public/ /app/frontend/public/
+
+COPY Caddyfile.prod /app/Caddyfile
+
 RUN chown -R app:app /app
 
 USER app
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/admin/live', timeout=3).read()"
-
-CMD sh -c "alembic upgrade head 2>/dev/null; python -m uvicorn ai_scientist.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+CMD sh -c "\
+  cd /app/frontend && PORT=3000 node server.js & \
+  cd /app && python -m uvicorn ai_scientist.main:app --host 0.0.0.0 --port 8000 & \
+  caddy run --config /app/Caddyfile"
