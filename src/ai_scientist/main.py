@@ -180,16 +180,12 @@ def validate_production_configuration() -> None:
         return
     weak_values = {"", "change-me", "change-this-local-secret", "dev-change-me"}
     failures = []
-    if settings.resolved_store_backend != "postgres" or not settings.database_url:
-        failures.append("DATABASE_URL/Postgres store is required")
     if settings.jwt_secret in weak_values or len(settings.jwt_secret) < 32:
         failures.append("AI_SCIENTIST_JWT_SECRET must be a strong secret")
     if settings.app_password in weak_values or len(settings.app_password) < 12:
         failures.append("AI_SCIENTIST_APP_PASSWORD must be set")
     if not settings.cookie_secure:
         failures.append("AI_SCIENTIST_COOKIE_SECURE=true is required")
-    if settings.storage_backend != "minio":
-        failures.append("AI_SCIENTIST_STORAGE_BACKEND=minio is required")
     if failures:
         raise RuntimeError("Production configuration is unsafe: " + "; ".join(failures))
 
