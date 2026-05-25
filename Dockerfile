@@ -35,7 +35,6 @@ COPY templates /app/templates
 
 COPY --from=frontend-builder /app/frontend/.next/standalone/ /app/frontend/
 COPY --from=frontend-builder /app/frontend/.next/static/ /app/frontend/.next/static/
-COPY --from=frontend-builder /app/frontend/public/ /app/frontend/public/
 
 COPY Caddyfile.prod /app/Caddyfile
 
