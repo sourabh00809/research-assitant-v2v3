@@ -11,6 +11,8 @@ if (-not (Test-Path ".env.production")) {
 docker compose --env-file .env.production -f $ComposeFile pull
 docker compose --env-file .env.production -f $ComposeFile build
 docker compose --env-file .env.production -f $ComposeFile up -d
-docker compose --env-file .env.production -f $ComposeFile exec backend alembic upgrade head
-docker compose --env-file .env.production -f $ComposeFile exec backend python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/admin/ready', timeout=5).read(); print('ready')"
+Start-Sleep -Seconds 10
+docker compose --env-file .env.production -f $ComposeFile exec backend alembic upgrade head 2>$null
+Start-Sleep -Seconds 5
+docker compose --env-file .env.production -f $ComposeFile exec backend python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/admin/ready', timeout=10).read(); print('ready')"
 docker compose --env-file .env.production -f $ComposeFile ps

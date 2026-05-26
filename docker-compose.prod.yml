@@ -23,7 +23,7 @@ services:
     environment:
       AI_SCIENTIST_ENV: production
       AI_SCIENTIST_STORE_BACKEND: postgres
-      DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@db.${SUPABASE_PROJECT_REF}.supabase.co:5432/postgres
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379/0
       AI_SCIENTIST_SANDBOX_BACKEND: docker
       AI_SCIENTIST_COOKIE_SECURE: "true"
@@ -44,7 +44,7 @@ services:
     environment:
       AI_SCIENTIST_ENV: production
       AI_SCIENTIST_STORE_BACKEND: postgres
-      DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@db.${SUPABASE_PROJECT_REF}.supabase.co:5432/postgres
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379/0
       AI_SCIENTIST_SANDBOX_BACKEND: docker
     volumes:
