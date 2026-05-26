@@ -19,15 +19,17 @@ class Settings:
         self.jwt_ttl_seconds = int(os.getenv("AI_SCIENTIST_JWT_TTL_SECONDS", "604800"))
         self.cookie_secure = os.getenv("AI_SCIENTIST_COOKIE_SECURE", "false").lower() == "true"
         self.cookie_samesite = os.getenv("AI_SCIENTIST_COOKIE_SAMESITE", "lax")
-        self.stripe_secret_key = os.getenv("STRIPE_SECRET_KEY", "")
-        self.stripe_webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-        self.stripe_price_free = os.getenv("STRIPE_PRICE_FREE", "")
-        self.stripe_price_pro = os.getenv("STRIPE_PRICE_PRO", "")
-        self.stripe_price_team = os.getenv("STRIPE_PRICE_TEAM", "")
-        self.minio_endpoint = os.getenv("MINIO_ENDPOINT", "localhost:9000")
-        self.minio_access_key = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-        self.minio_secret_key = os.getenv("MINIO_SECRET_KEY", "minioadmin")
-        self.minio_bucket = os.getenv("MINIO_BUCKET", "ai-scientist")
+        self.supabase_url = os.getenv("SUPABASE_URL", "")
+        self.supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+        self.supabase_anon_key = os.getenv("SUPABASE_ANON_KEY", "")
+        self.supabase_storage_bucket = os.getenv("SUPABASE_STORAGE_BUCKET", "research-assets")
+        self.groq_api_key = os.getenv("GROQ_API_KEY", "")
+        self.tavily_api_key = os.getenv("TAVILY_API_KEY", "")
+        self.unstructured_api_key = os.getenv("UNSTRUCTURED_API_KEY", "")
+        self.openalex_enabled = os.getenv("AI_SCIENTIST_OPENALEX_ENABLED", "true").lower() == "true"
+        self.core_enabled = os.getenv("AI_SCIENTIST_CORE_ENABLED", "true").lower() == "true"
+        self.crossref_enabled = os.getenv("AI_SCIENTIST_CROSSREF_ENABLED", "true").lower() == "true"
+        self.groq_enabled = os.getenv("AI_SCIENTIST_GROQ_ENABLED", "true").lower() == "true"
         self.sandbox_backend = os.getenv("AI_SCIENTIST_SANDBOX_BACKEND", "local").lower()
         self.sandbox_image = os.getenv("AI_SCIENTIST_SANDBOX_IMAGE", "python:3.11-slim")
         self.sandbox_cpu_quota = int(os.getenv("AI_SCIENTIST_SANDBOX_CPU_QUOTA", "50000"))

@@ -48,7 +48,7 @@ from .autonomous import (
 from .autonomous import (
     create_saved_search as create_saved_search_record,
 )
-from .billing import apply_webhook, create_checkout_session, create_portal_session, verify_webhook_signature
+from .billing import list_plans, upgrade_subscription
 from .config import settings
 from .csrf import csrf_middleware, set_csrf_cookie
 from .embeddings import rank_chunks
@@ -479,39 +479,22 @@ def update_notification_prefs(body: dict, request: Request) -> dict:
 
 @app.get("/api/v1/billing/plans")
 def list_billing_plans() -> list[dict]:
-    return [
-        {"tier": "free", "name": "Free", "desc": "Basic research briefs and project memory.", "price": "\u20B90"},
-        {"tier": "pro", "name": "Pro", "desc": "More runs, PDF uploads, better models.", "price": "\u20B9999/mo"},
-        {"tier": "team", "name": "Team", "desc": "Shared projects, admin controls, collaboration.", "price": "\u20B92,499/mo"},
-    ]
+    return list_plans()
 
 
-@app.post("/api/v1/billing/checkout")
-def billing_checkout(request: BillingCheckoutRequest) -> dict:
-    return create_checkout_session(request.team_id, request.tier, request.success_url, request.cancel_url)
-
-
-@app.post("/api/v1/billing/portal")
-def billing_portal(team_id: str, return_url: str = "http://127.0.0.1:8000/app") -> dict:
-    subscriptions = STORE.list_subscriptions(team_id)
-    customer_id = subscriptions[0].stripe_customer_id if subscriptions else ""
-    return create_portal_session(customer_id, return_url)
-
-
-@app.post("/api/v1/billing/webhook")
-async def billing_webhook(request: Request) -> dict:
-    body = await request.body()
-    if not verify_webhook_signature(body, request.headers.get("stripe-signature", "")):
-        raise HTTPException(status_code=400, detail="Invalid webhook signature")
-    event = json.loads(body.decode("utf-8") or "{}")
-    team_id = event.get("data", {}).get("object", {}).get("metadata", {}).get("team_id") or event.get("team_id", "")
-    subscriptions = STORE.list_subscriptions(team_id) if team_id else STORE.list_subscriptions()
-    subscription = subscriptions[0] if subscriptions else None
-    if not subscription:
-        raise HTTPException(status_code=404, detail="Subscription not found for webhook")
-    updated = apply_webhook(event, subscription)
+@app.post("/api/v1/billing/upgrade")
+def billing_upgrade(request: BillingCheckoutRequest, http_request: Request) -> dict:
+    claims = current_claims(http_request)
+    if not claims:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    subscriptions = STORE.list_subscriptions(claims.team_id)
+    if not subscriptions:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    subscription = subscriptions[0]
+    updated = upgrade_subscription(subscription, request.tier)
     STORE.save_subscription(updated)
-    return {"subscription": updated.model_dump(mode="json")}
+    logger.info("billing:upgrade team=%s tier=%s", claims.team_id, request.tier)
+    return {"subscription": updated.model_dump(mode="json"), "message": f"Upgraded to {request.tier} tier"}
 
 
 @app.post("/api/v1/jobs")
@@ -628,12 +611,24 @@ def run_research_question(project_id: str, request: RunQuestionRequest) -> RunQu
         settings.ai_provider,
         len(extra_sources),
     )
-    run, brief = ORCHESTRATOR.run(
-        question,
-        max_papers=request.max_papers,
-        memory=project.memory if request.use_memory else [],
-        extra_sources=extra_sources,
-    )
+    if request.provider or request.model or request.web_search is not None or request.sources is not None:
+        ai_provider = build_provider(request.provider or settings.ai_provider, request.model or settings.model)
+        orchestrator = ResearchOrchestrator(ai_provider=ai_provider, web_search_enabled=request.web_search)
+        run, brief = orchestrator.run(
+            question,
+            max_papers=request.max_papers,
+            memory=project.memory if request.use_memory else [],
+            extra_sources=extra_sources,
+            sources=request.sources,
+        )
+    else:
+        run, brief = ORCHESTRATOR.run(
+            question,
+            max_papers=request.max_papers,
+            memory=project.memory if request.use_memory else [],
+            extra_sources=extra_sources,
+            sources=request.sources,
+        )
     brief.question_id = question.id
     question.agent_run_id = run.id
     question.brief_id = brief.id
@@ -656,24 +651,28 @@ def v1_run_question(project_id: str, request: RunQuestionRequest) -> dict:
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    job = queue_job("research_pipeline", project_id, {
+    job_payload = {
         "project_id": project_id,
         "question": request.question,
         "max_papers": request.max_papers,
         "use_memory": request.use_memory,
-    })
+    }
+    if request.sources is not None:
+        job_payload["sources"] = request.sources
+    if request.provider is not None:
+        job_payload["provider"] = request.provider
+    if request.model is not None:
+        job_payload["model"] = request.model
+    if request.web_search is not None:
+        job_payload["web_search"] = request.web_search
+    job = queue_job("research_pipeline", project_id, job_payload)
 
     from . import jobs as jobs_module
     celery_available = len(jobs_module._LOCAL_JOBS) == 0
 
     if not celery_available:
         jobs_module._LOCAL_JOBS.clear()
-        result = jobs_module.execute_job(job.model_dump(mode="json"), {
-            "project_id": project_id,
-            "question": request.question,
-            "max_papers": request.max_papers,
-            "use_memory": request.use_memory,
-        })
+        result = jobs_module.execute_job(job.model_dump(mode="json"), job_payload)
         job.status = "completed" if result.get("status") == "completed" else "failed"
         job.result = result
         STORE.save_job(job)
@@ -1437,7 +1436,7 @@ def admin_health() -> dict:
         "storage": storage_health(),
         "sandbox": {"backend": settings.sandbox_backend, "image": settings.sandbox_image},
         "connectors": [item.model_dump(mode="json") for item in ORCHESTRATOR.search_service.connector_status()],
-        "billing": "stripe-test" if settings.stripe_secret_key else "stripe-test-stub",
+        "billing": "mock-upgrade",
     }
 
 
@@ -1629,8 +1628,8 @@ def v2_v3_workspace_html() -> str:
   }
   async function checkout() {
     const teamId = state.session.team?.id || 'local';
-    const result = await api('/api/v1/billing/checkout', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({team_id:teamId,tier:'pro',success_url:location.href,cancel_url:location.href})});
-    alert('Checkout ready: ' + result.url);
+    const result = await api('/api/v1/billing/upgrade', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({team_id:teamId,tier:'pro'})});
+    alert('Upgraded to: ' + result.subscription.tier);
   }
   load();
 </script>

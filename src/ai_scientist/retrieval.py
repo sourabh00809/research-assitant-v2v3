@@ -90,22 +90,34 @@ class SearchService:
     def __init__(self, live_search: bool | None = None):
         self.live_search = live_search if live_search is not None else os.getenv("AI_SCIENTIST_LIVE_SEARCH") == "1"
         self.pubmed_enabled = os.getenv("AI_SCIENTIST_PUBMED_ENABLED", "false").lower() == "true"
+        self.openalex_enabled = os.getenv("AI_SCIENTIST_OPENALEX_ENABLED", "true").lower() == "true"
+        self.core_enabled = os.getenv("AI_SCIENTIST_CORE_ENABLED", "true").lower() == "true"
+        self.crossref_enabled = os.getenv("AI_SCIENTIST_CROSSREF_ENABLED", "true").lower() == "true"
         self.last_connector_counts: dict[str, int] = {}
 
-    def search(self, question: str, max_papers: int = 6, extra_sources: list[PaperSource] | None = None) -> list[PaperSource]:
+    def search(self, question: str, max_papers: int = 6, extra_sources: list[PaperSource] | None = None, sources: list[str] | None = None) -> list[PaperSource]:
         papers: list[PaperSource] = list(extra_sources or [])
         if self.live_search:
-            arxiv = self._search_arxiv(question, max_papers=max_papers)
-            semantic = self._search_semantic_scholar(question, max_papers=max_papers)
-            pubmed = self._search_pubmed(question, max_papers=max_papers) if self.pubmed_enabled else []
+            arxiv = self._search_arxiv(question, max_papers=max_papers) if sources is None or "arxiv" in sources else []
+            semantic = self._search_semantic_scholar(question, max_papers=max_papers) if sources is None or "semantic_scholar" in sources else []
+            pubmed = self._search_pubmed(question, max_papers=max_papers) if self.pubmed_enabled and (sources is None or "pubmed" in sources) else []
+            openalex = self._search_openalex(question, max_papers=max_papers) if self.openalex_enabled and (sources is None or "openalex" in sources) else []
+            core = self._search_core(question, max_papers=max_papers) if self.core_enabled and (sources is None or "core" in sources) else []
+            crossref = self._search_crossref(question, max_papers=max_papers) if self.crossref_enabled and (sources is None or "crossref" in sources) else []
             self.last_connector_counts = {
                 "arxiv": len(arxiv),
                 "semantic_scholar": len(semantic),
                 "pubmed": len(pubmed),
+                "openalex": len(openalex),
+                "core": len(core),
+                "crossref": len(crossref),
             }
             papers.extend(arxiv)
             papers.extend(semantic)
             papers.extend(pubmed)
+            papers.extend(openalex)
+            papers.extend(core)
+            papers.extend(crossref)
 
         papers.extend(SEED_CORPUS)
         ranked = rank_papers(question, dedupe_papers(papers))
@@ -131,6 +143,24 @@ class SearchService:
                 enabled=self.live_search and self.pubmed_enabled,
                 last_result_count=self.last_connector_counts.get("pubmed", 0),
                 health="ready" if self.live_search and self.pubmed_enabled else "disabled",
+            ),
+            ConnectorStatus(
+                source_type="openalex",
+                enabled=self.live_search and self.openalex_enabled,
+                last_result_count=self.last_connector_counts.get("openalex", 0),
+                health="ready" if self.live_search and self.openalex_enabled else "disabled",
+            ),
+            ConnectorStatus(
+                source_type="core",
+                enabled=self.live_search and self.core_enabled,
+                last_result_count=self.last_connector_counts.get("core", 0),
+                health="ready" if self.live_search and self.core_enabled else "disabled",
+            ),
+            ConnectorStatus(
+                source_type="crossref",
+                enabled=self.live_search and self.crossref_enabled,
+                last_result_count=self.last_connector_counts.get("crossref", 0),
+                health="ready" if self.live_search and self.crossref_enabled else "disabled",
             ),
         ]
 
@@ -276,6 +306,149 @@ class SearchService:
                 )
             )
         return papers
+
+
+    def _search_openalex(self, question: str, max_papers: int) -> list[PaperSource]:
+        query = urllib.parse.quote(question)
+        url = f"https://api.openalex.org/works?search={query}&per-page={max_papers}&sort=relevance_score:desc"
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": "ai-scientist-platform-mvp"})
+            with urllib.request.urlopen(request, timeout=8) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except Exception as exc:
+            logger.warning("OpenAlex search failed: %s", exc)
+            return []
+
+        papers: list[PaperSource] = []
+        for item in payload.get("results", []):
+            title = item.get("title") or "Untitled"
+            abstract = item.get("abstract_inverted_index")
+            abstract_text = reconstruct_abstract(abstract) if abstract else "No abstract available from OpenAlex."
+            authors_list = [a.get("author", {}).get("display_name", "") for a in item.get("authorships", []) if a.get("author")]
+            year = item.get("publication_year")
+            doi = item.get("doi", "").replace("https://doi.org/", "") if item.get("doi") else None
+            open_access = item.get("open_access", {}) or {}
+            concepts = [c.get("display_name", "") for c in item.get("concepts", []) if c.get("display_name")]
+            papers.append(
+                PaperSource(
+                    id=f"openalex_{item.get('id', '').split('/')[-1] or len(papers)}",
+                    title=clean_text(title),
+                    authors=authors_list,
+                    year=year,
+                    abstract=clean_text(abstract_text),
+                    url=item.get("id") or "",
+                    source="openalex",
+                    source_type="openalex",
+                    sources=["openalex"],
+                    citation=format_citation(authors_list, year, title),
+                    doi=doi,
+                    open_access_url=open_access.get("oa_url"),
+                    concepts=concepts,
+                    citation_count=item.get("cited_by_count"),
+                    publisher=(item.get("primary_location") or {}).get("source", {}).get("display_name") if item.get("primary_location") else None,
+                )
+            )
+        return papers
+
+    def _search_core(self, question: str, max_papers: int) -> list[PaperSource]:
+        api_key = os.getenv("CORE_API_KEY", "")
+        if not api_key:
+            logger.info("CORE search skipped: CORE_API_KEY not set")
+            return []
+        query = urllib.parse.quote(question)
+        url = f"https://api.core.ac.uk/v3/search/works?q={query}&limit={max_papers}"
+        try:
+            request = urllib.request.Request(url, headers={"Authorization": f"Bearer {api_key}", "User-Agent": "ai-scientist-platform-mvp"})
+            with urllib.request.urlopen(request, timeout=8) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except Exception as exc:
+            logger.warning("CORE search failed: %s", exc)
+            return []
+
+        papers: list[PaperSource] = []
+        for item in payload.get("results", []):
+            title = item.get("title") or "Untitled"
+            abstract = item.get("abstract") or "No abstract available from CORE."
+            authors_list = [author.get("name", "") for author in item.get("authors", []) if author.get("name")]
+            year = item.get("yearOfPublication") or item.get("datePublished")
+            if isinstance(year, str) and len(year) >= 4:
+                year = int(year[:4])
+            doi = item.get("doi")
+            download_url = item.get("downloadUrl")
+            papers.append(
+                PaperSource(
+                    id=f"core_{item.get('id', len(papers))}",
+                    title=clean_text(title),
+                    authors=authors_list,
+                    year=year,
+                    abstract=clean_text(abstract),
+                    url=item.get("sourceUrl") or item.get("doi") or "",
+                    source="core",
+                    source_type="core",
+                    sources=["core"],
+                    citation=format_citation(authors_list, year, title),
+                    doi=doi,
+                    open_access_url=download_url or item.get("fullTextUrl"),
+                    publisher=item.get("publisher"),
+                )
+            )
+        return papers
+
+    def _search_crossref(self, question: str, max_papers: int) -> list[PaperSource]:
+        query = urllib.parse.quote(question)
+        url = f"https://api.crossref.org/works?query={query}&rows={max_papers}&sort=relevance&order=desc"
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": "ai-scientist-platform-mvp"})
+            with urllib.request.urlopen(request, timeout=8) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except Exception as exc:
+            logger.warning("CrossRef search failed: %s", exc)
+            return []
+
+        papers: list[PaperSource] = []
+        for item in payload.get("message", {}).get("items", []):
+            title = (item.get("title") or ["Untitled"])[0]
+            abstract = item.get("abstract") or ""
+            abstract_clean = clean_text(abstract.replace("<jats:p>", "").replace("</jats:p>", "")) if abstract else "No abstract available from CrossRef."
+            authors_list = []
+            for author in item.get("author", []):
+                given = author.get("given", "")
+                family = author.get("family", "")
+                name = f"{given} {family}".strip()
+                if name:
+                    authors_list.append(name)
+            year = (item.get("published-print") or item.get("published-online") or item.get("issued") or {}).get("date-parts", [[None]])[0][0]
+            doi = item.get("DOI")
+            container = item.get("container-title", [None])[0] if item.get("container-title") else None
+            papers.append(
+                PaperSource(
+                    id=f"crossref_{doi or len(papers)}",
+                    title=clean_text(title),
+                    authors=authors_list,
+                    year=year,
+                    abstract=abstract_clean,
+                    url=f"https://doi.org/{doi}" if doi else "",
+                    source="crossref",
+                    source_type="crossref",
+                    sources=["crossref"],
+                    citation=format_citation(authors_list, year, title),
+                    doi=doi,
+                    journal=container,
+                    publisher=item.get("publisher"),
+                )
+            )
+        return papers
+
+
+def reconstruct_abstract(inverted_index: dict) -> str:
+    if not inverted_index:
+        return ""
+    word_positions = []
+    for word, positions in inverted_index.items():
+        for pos in positions:
+            word_positions.append((pos, word))
+    word_positions.sort(key=lambda x: x[0])
+    return " ".join(word for _, word in word_positions)
 
 
 def rank_papers(question: str, papers: Iterable[PaperSource]) -> list[PaperSource]:

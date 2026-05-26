@@ -112,6 +112,48 @@ class HuggingFaceProvider(AIProvider):
             return ProviderResult(text="", provider="deterministic", warnings=[f"HuggingFace provider failed; used deterministic fallback: {exc}"])
 
 
+class GroqProvider(AIProvider):
+    """Fast LLM inference via Groq API.
+
+    Uses Mixtral, Llama 3, or Gemma models through Groq's ultra-fast
+    inference engine.  Free tier allows 30 req/min.  Requires GROQ_API_KEY.
+    """
+
+    name = "groq"
+
+    def __init__(self, model: str = "mixtral-8x7b-32768"):
+        self.model = model
+        self.api_key = os.getenv("GROQ_API_KEY", "")
+
+    def synthesize(self, prompt: str) -> ProviderResult:
+        if not self.api_key:
+            return ProviderResult(text="", provider="deterministic", warnings=["GROQ_API_KEY not set; used deterministic fallback."])
+        try:
+            payload = json.dumps({
+                "model": self.model,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 2048,
+                "temperature": 0.3,
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                "https://api.groq.com/openai/v1/chat/completions",
+                data=payload,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+            )
+            with urllib.request.urlopen(request, timeout=30) as response:
+                data = json.loads(response.read().decode("utf-8"))
+            choices = data.get("choices", [])
+            text = choices[0]["message"]["content"] if choices else ""
+            if text:
+                return ProviderResult(text=text, provider=self.name, warnings=[])
+            return ProviderResult(text="", provider="deterministic", warnings=["Groq returned empty response; used deterministic fallback."])
+        except Exception as exc:
+            return ProviderResult(text="", provider="deterministic", warnings=[f"Groq provider failed; used deterministic fallback: {exc}"])
+
+
 class OllamaProvider(AIProvider):
     """Free local inference via Ollama.
 
@@ -167,9 +209,15 @@ def build_provider(provider_name: str | None = None, model: str | None = None) -
         return HuggingFaceProvider(model=model or "mistralai/Mistral-7B-Instruct-v0.3")
     if provider_name == "ollama":
         return OllamaProvider(model=model or "mistral")
+    if provider_name == "groq":
+        return GroqProvider(model=model or "mixtral-8x7b-32768")
     if provider_name and provider_name != "auto":
         return DeterministicProvider()
 
+    groq_key = os.getenv("GROQ_API_KEY")
+    if groq_key:
+        logger.info("AI provider: auto-selected Groq")
+        return GroqProvider(model=model or "mixtral-8x7b-32768")
     if _detect_ollama():
         logger.info("AI provider: auto-detected Ollama")
         return OllamaProvider(model=model or "mistral")

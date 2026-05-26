@@ -7,7 +7,15 @@ $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $target = Join-Path $OutDir $stamp
 New-Item -ItemType Directory -Force -Path $target | Out-Null
 
-docker compose --env-file .env.production -f docker-compose.prod.yml exec -T postgres pg_dump -U ai_scientist ai_scientist | Set-Content -Encoding UTF8 (Join-Path $target "postgres.sql")
-docker compose --env-file .env.production -f docker-compose.prod.yml exec -T minio sh -c "tar -C /data -cf - ." > (Join-Path $target "minio.tar")
+$container = docker compose --env-file .env.production -f docker-compose.prod.yml ps -q redis
+if (-not $container) {
+  throw "Redis container not running"
+}
+
+docker compose --env-file .env.production -f docker-compose.prod.yml exec -T redis redis-cli --rdb /tmp/dump.rdb
+docker cp "${container}:/tmp/dump.rdb" (Join-Path $target "dump.rdb")
+docker compose --env-file .env.production -f docker-compose.prod.yml exec -T redis rm /tmp/dump.rdb
+
 Compress-Archive -Path $target -DestinationPath "$target.zip" -Force
+Remove-Item -Recurse -Force $target
 Write-Host "Backup written to $target.zip"

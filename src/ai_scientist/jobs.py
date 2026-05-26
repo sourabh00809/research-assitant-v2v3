@@ -80,6 +80,10 @@ def _run_research_pipeline(job: JobRecord, payload: dict[str, Any]) -> dict[str,
         question_text = payload.get("question", "")
         max_papers = payload.get("max_papers", 6)
         use_memory = payload.get("use_memory", True)
+        sources = payload.get("sources")
+        provider_name = payload.get("provider")
+        model_name = payload.get("model")
+        web_search_enabled = payload.get("web_search")
 
         project = store.get_project(project_id)
         if not project:
@@ -89,12 +93,14 @@ def _run_research_pipeline(job: JobRecord, payload: dict[str, Any]) -> dict[str,
         chunks = store.list_document_chunks(project_id, limit=settings.max_chunks)
         extra_sources = chunks_to_paper_sources(chunks, max_chunks=settings.max_chunks)
 
-        orchestrator = ResearchOrchestrator(ai_provider=build_provider(settings.ai_provider, settings.model))
+        ai_provider = build_provider(provider_name or settings.ai_provider, model_name or settings.model)
+        orchestrator = ResearchOrchestrator(ai_provider=ai_provider, web_search_enabled=web_search_enabled)
         run, brief = orchestrator.run(
             question,
             max_papers=max_papers,
             memory=project.memory if use_memory else [],
             extra_sources=extra_sources,
+            sources=sources,
         )
         brief.question_id = question.id
         question.agent_run_id = run.id

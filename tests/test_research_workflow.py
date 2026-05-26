@@ -1,5 +1,8 @@
+import io
+import json
+
 from ai_scientist.agents import ResearchOrchestrator
-from ai_scientist.models import MemoryItem, ResearchQuestion, utc_now
+from ai_scientist.models import MemoryItem, PaperSource, ResearchQuestion, utc_now
 
 
 def test_research_question_generates_citation_grounded_brief():
@@ -415,6 +418,196 @@ def test_openai_provider_failure_with_api_key_falls_back(monkeypatch):
     assert "OpenAI provider failed" in result.warnings[0]
 
 
+def test_openalex_search_returns_papers(monkeypatch):
+    from ai_scientist.retrieval import SearchService
+
+    def mock_openalex(*args, **kwargs):
+        body = json.dumps({
+            "results": [{
+                "id": "https://openalex.org/W123",
+                "title": "OpenAlex Test Paper",
+                "abstract_inverted_index": {"Test": [0], "abstract": [1]},
+                "authorships": [{"author": {"display_name": "Alice Smith"}}],
+                "publication_year": 2023,
+                "doi": "https://doi.org/10.1234/test",
+                "cited_by_count": 5,
+                "open_access": {"oa_url": "https://openalex.org/W123/pdf"},
+                "concepts": [{"display_name": "Machine Learning"}],
+                "primary_location": {"source": {"display_name": "Test Journal"}},
+            }]
+        }).encode("utf-8")
+        return io.BytesIO(body)
+
+    monkeypatch.setenv("AI_SCIENTIST_LIVE_SEARCH", "1")
+    monkeypatch.setattr("urllib.request.urlopen", mock_openalex)
+    service = SearchService()
+    papers = service._search_openalex("test query", max_papers=3)
+    assert len(papers) == 1
+    assert papers[0].source_type == "openalex"
+    assert papers[0].title == "OpenAlex Test Paper"
+    assert papers[0].authors == ["Alice Smith"]
+    assert papers[0].doi == "10.1234/test"
+    assert papers[0].citation_count == 5
+    assert papers[0].concepts == ["Machine Learning"]
+    assert papers[0].publisher == "Test Journal"
+
+
+def test_core_search_requires_api_key(monkeypatch):
+    from ai_scientist.retrieval import SearchService
+
+    monkeypatch.delenv("CORE_API_KEY", raising=False)
+    monkeypatch.setenv("AI_SCIENTIST_LIVE_SEARCH", "1")
+    service = SearchService()
+    papers = service._search_core("test query", max_papers=3)
+    assert papers == []
+
+
+def test_core_search_returns_papers(monkeypatch):
+    from ai_scientist.retrieval import SearchService
+
+    def mock_core(*args, **kwargs):
+        body = json.dumps({
+            "results": [{
+                "id": 456,
+                "title": "CORE Test Paper",
+                "abstract": "A test abstract from CORE.",
+                "authors": [{"name": "Bob Jones"}],
+                "yearOfPublication": 2022,
+                "doi": "10.5678/core-test",
+                "publisher": "CORE Publisher",
+                "sourceUrl": "https://core.ac.uk/456",
+            }]
+        }).encode("utf-8")
+        return io.BytesIO(body)
+
+    monkeypatch.setenv("AI_SCIENTIST_LIVE_SEARCH", "1")
+    monkeypatch.setenv("CORE_API_KEY", "test-core-key")
+    monkeypatch.setattr("urllib.request.urlopen", mock_core)
+    service = SearchService()
+    papers = service._search_core("test query", max_papers=3)
+    assert len(papers) == 1
+    assert papers[0].source_type == "core"
+    assert papers[0].title == "CORE Test Paper"
+    assert papers[0].doi == "10.5678/core-test"
+    assert papers[0].publisher == "CORE Publisher"
+
+
+def test_crossref_search_returns_papers(monkeypatch):
+    from ai_scientist.retrieval import SearchService
+
+    def mock_crossref(*args, **kwargs):
+        body = json.dumps({
+            "message": {
+                "items": [{
+                    "title": ["CrossRef Test Paper"],
+                    "abstract": "<jats:p>A crossref abstract.</jats:p>",
+                    "author": [{"given": "Carol", "family": "Lee"}],
+                    "published-print": {"date-parts": [[2021]]},
+                    "DOI": "10.9101/cr-test",
+                    "publisher": "CrossRef Pub",
+                    "container-title": ["Test Journal"],
+                }]
+            }
+        }).encode("utf-8")
+        return io.BytesIO(body)
+
+    monkeypatch.setenv("AI_SCIENTIST_LIVE_SEARCH", "1")
+    monkeypatch.setattr("urllib.request.urlopen", mock_crossref)
+    service = SearchService()
+    papers = service._search_crossref("test query", max_papers=3)
+    assert len(papers) == 1
+    assert papers[0].source_type == "crossref"
+    assert papers[0].title == "CrossRef Test Paper"
+    assert papers[0].doi == "10.9101/cr-test"
+    assert papers[0].publisher == "CrossRef Pub"
+    assert papers[0].journal == "Test Journal"
+
+
+def test_search_service_respects_sources_filter(monkeypatch):
+    from ai_scientist.retrieval import SearchService
+
+    def mock_urlopen(*args, **kwargs):
+        body = json.dumps({"results": []}).encode("utf-8")
+        return io.BytesIO(body)
+
+    monkeypatch.setenv("AI_SCIENTIST_LIVE_SEARCH", "1")
+    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen)
+    service = SearchService()
+    service._search_arxiv = lambda q, max_papers: [PaperSource(id="arxiv_1", title="A", abstract="", url="", source="arxiv", source_type="arxiv", citation="A")]
+    service._search_openalex = lambda q, max_papers: [PaperSource(id="openalex_1", title="B", abstract="", url="", source="openalex", source_type="openalex", citation="B")]
+    service._search_crossref = lambda q, max_papers: []
+    papers_openalex = service.search("test", max_papers=10, sources=["openalex"])
+    assert any(p.source_type == "openalex" for p in papers_openalex)
+    assert not any(p.source_type == "arxiv" for p in papers_openalex)
+
+
+def test_tavily_web_search_returns_results(monkeypatch):
+    from ai_scientist.agents import tavily_web_search
+
+    def mock_tavily(*args, **kwargs):
+        body = json.dumps({
+            "results": [
+                {"title": "Result 1", "url": "https://example.com/1", "content": "Content one"},
+                {"title": "Result 2", "url": "https://example.com/2", "content": "Content two"},
+            ]
+        }).encode("utf-8")
+        return io.BytesIO(body)
+
+    monkeypatch.setenv("TAVILY_API_KEY", "test-tavily-key")
+    monkeypatch.setattr("urllib.request.urlopen", mock_tavily)
+    results = tavily_web_search("test query")
+    assert len(results) == 2
+    assert results[0]["source"] == "tavily"
+    assert results[0]["title"] == "Result 1"
+
+
+def test_tavily_web_search_skipped_without_key(monkeypatch):
+    from ai_scientist.agents import tavily_web_search
+
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+    results = tavily_web_search("test query")
+    assert results == []
+
+
+def test_parse_with_unstructured_returns_pages(monkeypatch):
+    from ai_scientist.ingestion import parse_with_unstructured
+
+    def mock_unstructured(*args, **kwargs):
+        body = json.dumps([
+            {"text": "Page one content", "metadata": {"page_number": 1}},
+            {"text": "Page two content", "metadata": {"page_number": 2}},
+        ]).encode("utf-8")
+        return io.BytesIO(body)
+
+    monkeypatch.setenv("UNSTRUCTURED_API_KEY", "test-unstructured-key")
+    monkeypatch.setattr("urllib.request.urlopen", mock_unstructured)
+    pages = parse_with_unstructured(b"fake pdf content", "test.pdf")
+    assert pages is not None
+    assert len(pages) == 2
+    assert pages[0] == (1, "Page one content")
+    assert pages[1] == (2, "Page two content")
+
+
+def test_parse_with_unstructured_returns_none_without_key(monkeypatch):
+    from ai_scientist.ingestion import parse_with_unstructured
+
+    monkeypatch.delenv("UNSTRUCTURED_API_KEY", raising=False)
+    pages = parse_with_unstructured(b"fake pdf content", "test.pdf")
+    assert pages is None
+
+
+def test_parse_with_unstructured_falls_back_on_error(monkeypatch):
+    from ai_scientist.ingestion import parse_with_unstructured
+
+    def fail(*args, **kwargs):
+        raise OSError("network error")
+
+    monkeypatch.setenv("UNSTRUCTURED_API_KEY", "test-key")
+    monkeypatch.setattr("urllib.request.urlopen", fail)
+    pages = parse_with_unstructured(b"fake pdf content", "test.pdf")
+    assert pages is None
+
+
 def test_password_gate_blocks_and_login_allows_access(monkeypatch, tmp_path):
     import importlib
 
@@ -507,9 +700,7 @@ def test_docker_compose_config_exposes_app_and_persistent_volumes():
     assert "env_file:" in compose
     assert "./data:/app/data" in compose
     assert "./storage:/app/storage" in compose
-    assert "postgres:" in compose
     assert "redis:" in compose
-    assert "minio:" in compose
     assert "worker:" in compose
     assert "scheduler:" in compose
 

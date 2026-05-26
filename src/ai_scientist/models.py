@@ -28,7 +28,7 @@ class PaperSource(BaseModel):
     arxiv_id: str | None = None
     relevance_score: float = 0.0
     relevance_reason: str = ""
-    source_type: Literal["pdf", "arxiv", "semantic_scholar", "pubmed", "seed"] = "seed"
+    source_type: Literal["pdf", "arxiv", "semantic_scholar", "pubmed", "openalex", "core", "crossref", "seed"] = "seed"
     sources: list[str] = Field(default_factory=list)
     citation_count: int | None = None
     influential_citation_count: int | None = None
@@ -38,6 +38,8 @@ class PaperSource(BaseModel):
     categories: list[str] = Field(default_factory=list)
     mesh_terms: list[str] = Field(default_factory=list)
     journal: str | None = None
+    concepts: list[str] = Field(default_factory=list)
+    publisher: str | None = None
     embedding_status: Literal["pending", "embedded", "failed"] = "pending"
     paper_id: str | None = None
     chunk_id: str | None = None
@@ -130,7 +132,7 @@ class EvidenceItem(BaseModel):
     semantic_score: float | None = None
     keyword_score: float | None = None
     retrieval_method: Literal["semantic", "keyword", "hybrid"] = "keyword"
-    source_type: Literal["pdf", "arxiv", "semantic_scholar", "pubmed", "seed"] | None = None
+    source_type: Literal["pdf", "arxiv", "semantic_scholar", "pubmed", "openalex", "core", "crossref", "seed"] | None = None
     source_badges: list[str] = Field(default_factory=list)
 
 
@@ -186,7 +188,7 @@ class DeduplicationRecord(BaseModel):
 
 
 class ConnectorResult(BaseModel):
-    source_type: Literal["arxiv", "semantic_scholar", "pubmed"]
+    source_type: Literal["arxiv", "semantic_scholar", "pubmed", "openalex", "core", "crossref"]
     paper_id: str
     title: str
     abstract: str
@@ -199,7 +201,7 @@ class ConnectorResult(BaseModel):
 
 
 class ConnectorStatus(BaseModel):
-    source_type: Literal["arxiv", "semantic_scholar", "pubmed"]
+    source_type: Literal["arxiv", "semantic_scholar", "pubmed", "openalex", "core", "crossref"]
     enabled: bool
     last_run_at: str | None = None
     last_result_count: int = 0
@@ -547,6 +549,10 @@ class RunQuestionRequest(BaseModel):
     question: str = Field(min_length=6, max_length=800)
     max_papers: int = Field(default=6, ge=3, le=12)
     use_memory: bool = True
+    sources: list[str] | None = None
+    provider: str | None = None
+    model: str | None = None
+    web_search: bool | None = None
 
 
 class AddMemoryRequest(BaseModel):
@@ -717,8 +723,6 @@ class SubscriptionRecord(BaseModel):
     team_id: str
     tier: Literal["free", "pro", "team"] = "free"
     status: Literal["active", "past_due", "cancelled"] = "active"
-    stripe_customer_id: str = ""
-    stripe_subscription_id: str = ""
     created_at: str
 
 
@@ -827,11 +831,6 @@ class BillingCheckoutRequest(BaseModel):
     success_url: str = "http://127.0.0.1:8000/app?billing=success"
     cancel_url: str = "http://127.0.0.1:8000/app?billing=cancelled"
 
-
-class BillingWebhookRequest(BaseModel):
-    type: str
-    data: dict[str, Any] = Field(default_factory=dict)
-    id: str = ""
 
 
 class QueueJobRequest(BaseModel):

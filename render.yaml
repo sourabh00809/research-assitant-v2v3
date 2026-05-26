@@ -14,6 +14,8 @@ services:
         value: "0"
       - key: AI_SCIENTIST_AI_PROVIDER
         value: deterministic
+      - key: AI_SCIENTIST_MODEL
+        value: gpt-4.1-mini
       - key: AI_SCIENTIST_LIVE_SEARCH
         value: "0"
       - key: AI_SCIENTIST_COOKIE_SECURE
@@ -26,9 +28,33 @@ services:
         value: local
       - key: AI_SCIENTIST_SANDBOX_BACKEND
         value: disabled
+      - key: AI_SCIENTIST_PUBMED_ENABLED
+        value: "false"
+      - key: AI_SCIENTIST_OPENALEX_ENABLED
+        value: "true"
+      - key: AI_SCIENTIST_CORE_ENABLED
+        value: "true"
+      - key: AI_SCIENTIST_CROSSREF_ENABLED
+        value: "true"
+      - key: AI_SCIENTIST_GROQ_ENABLED
+        value: "true"
       - key: AI_SCIENTIST_PUBLIC_BASE_URL
         sync: false
       - key: AI_SCIENTIST_APP_PASSWORD
         sync: false
       - key: AI_SCIENTIST_JWT_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: research-assets
+      - key: GROQ_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: UNSTRUCTURED_API_KEY
         sync: false

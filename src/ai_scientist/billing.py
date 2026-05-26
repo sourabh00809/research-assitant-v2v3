@@ -1,66 +1,24 @@
 from __future__ import annotations
 
-import hashlib
-import hmac
-
-from .config import settings
 from .models import SubscriptionRecord
-from .saas import apply_webhook_event
 
-PRICE_BY_TIER = {
-    "free": lambda: settings.stripe_price_free,
-    "pro": lambda: settings.stripe_price_pro,
-    "team": lambda: settings.stripe_price_team,
+TIER_LABELS = {
+    "free": {"name": "Free", "desc": "Basic research briefs and project memory.", "price": "₹0"},
+    "pro": {"name": "Pro", "desc": "More runs, PDF uploads, better models.", "price": "₹999/mo"},
+    "team": {"name": "Team", "desc": "Shared projects, admin controls, collaboration.", "price": "₹2,499/mo"},
 }
 
 
-def create_checkout_session(team_id: str, tier: str, success_url: str, cancel_url: str) -> dict:
-    price = PRICE_BY_TIER.get(tier, PRICE_BY_TIER["pro"])()
-    if settings.stripe_secret_key:
-        try:
-            import stripe  # type: ignore
-
-            stripe.api_key = settings.stripe_secret_key
-            session = stripe.checkout.Session.create(
-                mode="subscription",
-                line_items=[{"price": price, "quantity": 1}] if price else [],
-                success_url=success_url,
-                cancel_url=cancel_url,
-                client_reference_id=team_id,
-                metadata={"team_id": team_id, "tier": tier},
-            )
-            return {"provider": "stripe", "url": session.url, "id": session.id, "tier": tier}
-        except Exception as exc:
-            return {"provider": "stripe", "url": "", "id": "", "tier": tier, "error": str(exc)}
-    return {
-        "provider": "stripe-test-stub",
-        "url": f"{success_url}&team_id={team_id}&tier={tier}",
-        "id": f"cs_test_{team_id}",
-        "tier": tier,
-    }
+def list_plans() -> list[dict]:
+    return [
+        {"tier": tier, "name": info["name"], "desc": info["desc"], "price": info["price"]}
+        for tier, info in TIER_LABELS.items()
+    ]
 
 
-def create_portal_session(customer_id: str, return_url: str) -> dict:
-    if settings.stripe_secret_key and customer_id:
-        try:
-            import stripe  # type: ignore
-            stripe.api_key = settings.stripe_secret_key
-            session = stripe.billing_portal.Session.create(
-                customer=customer_id,
-                return_url=return_url,
-            )
-            return {"provider": "stripe", "url": session.url, "id": session.id}
-        except Exception as exc:
-            return {"provider": "stripe", "url": "", "id": "", "error": str(exc)}
-    return {"provider": "stub", "url": f"{return_url}?portal=stub", "id": ""}
-
-
-def verify_webhook_signature(payload: bytes, signature: str) -> bool:
-    if not settings.stripe_webhook_secret:
-        return True
-    expected = hmac.new(settings.stripe_webhook_secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(signature, expected)
-
-
-def apply_webhook(event: dict, subscription: SubscriptionRecord) -> SubscriptionRecord:
-    return apply_webhook_event(event, subscription)
+def upgrade_subscription(subscription: SubscriptionRecord, tier: str) -> SubscriptionRecord:
+    if tier not in TIER_LABELS:
+        raise ValueError(f"Invalid tier: {tier}")
+    subscription.tier = tier
+    subscription.status = "active"
+    return subscription

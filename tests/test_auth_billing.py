@@ -482,60 +482,15 @@ def test_signup_creates_subscription(monkeypatch, tmp_path):
     assert subs[0].status == "active"
 
 
-# ── Billing: Webhook ─────────────────────────────────────────────────────────
+# ── Billing: upgrade_subscription ─────────────────────────────────────────────
 
 
-def test_billing_webhook_upgrades_subscription(monkeypatch, tmp_path):
-    main = _make_app(monkeypatch, tmp_path, suffix="billing2")
-    resp, _ = _signup(main.app, email="wh@example.com", ip="wh1")
-    body = json.loads(resp["body"])
-    team_id = body["team"]["id"]
-
-    from ai_scientist.config import settings
-    store = SQLiteStore(settings.db_path)
-    sub = store.list_subscriptions(team_id)[0]
-
-    event = {
-        "type": "checkout.session.completed",
-        "team_id": team_id,
-        "data": {
-            "object": {
-                "client_reference_id": team_id,
-                "metadata": {"tier": "pro"},
-                "customer": "cus_test",
-                "id": "sub_stripe",
-            }
-        },
-    }
-    webhook_resp = asgi_request(
-        main.app,
-        "POST",
-        "/api/v1/billing/webhook",
-        body=json.dumps(event).encode("utf-8"),
-        headers=[(b"content-type", b"application/json")],
-    )
-    assert webhook_resp["status"] == 200, f"Webhook failed: {webhook_resp['body']}"
-
-    updated = store.get_subscription(sub.id)
-    assert updated is not None
-    assert updated.tier == "pro", f"Expected pro, got {updated.tier}"
-    assert updated.stripe_customer_id == "cus_test"
-
-
-# ── Billing: apply_webhook_event unit ────────────────────────────────────────
-
-
-def test_apply_webhook_event_upgrades_tier():
-    from ai_scientist.billing import apply_webhook
+def test_upgrade_subscription():
+    from ai_scientist.billing import upgrade_subscription
 
     sub = SubscriptionRecord(id="sub_unit", team_id="team_unit", tier="free", status="active", created_at=utc_now())
-    event = {
-        "type": "checkout.session.completed",
-        "data": {"object": {"metadata": {"tier": "pro"}, "customer": "cus_unit", "id": "sub_unit_stripe"}},
-    }
-    updated = apply_webhook(event, sub)
+    updated = upgrade_subscription(sub, "pro")
     assert updated.tier == "pro"
-    assert updated.stripe_customer_id == "cus_unit"
     assert updated.status == "active"
 
 
@@ -587,6 +542,28 @@ def test_auto_detect_huggingface_when_no_ollama(monkeypatch):
 
     provider = build_provider()
     assert "HuggingFace" in type(provider).__name__
+
+
+def test_groq_provider_falls_back_without_key(monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    from ai_scientist.ai_providers import GroqProvider
+
+    result = GroqProvider(model="mixtral-8x7b-32768").synthesize("hello")
+    assert result.provider == "deterministic"
+    assert result.warnings
+
+
+def test_groq_provider_falls_back_on_error(monkeypatch):
+    def fail(*args, **kwargs):
+        raise OSError("network unavailable")
+
+    monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")
+    monkeypatch.setattr("urllib.request.urlopen", fail)
+    from ai_scientist.ai_providers import GroqProvider
+
+    result = GroqProvider(model="mixtral-8x7b-32768").synthesize("hello")
+    assert result.provider == "deterministic"
+    assert "Groq provider failed" in result.warnings[0]
 
 
 # ── DELETE Endpoints ─────────────────────────────────────────────────────────

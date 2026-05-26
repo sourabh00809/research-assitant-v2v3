@@ -79,25 +79,5 @@ def usage_summary(subscription: SubscriptionRecord, events: list[UsageEvent]) ->
     }
 
 
-def apply_webhook_event(event: dict, subscription: SubscriptionRecord) -> SubscriptionRecord:
-    data = event.get("data", {}).get("object", {}) if isinstance(event.get("data"), dict) else {}
-    if data.get("customer"):
-        subscription.stripe_customer_id = str(data["customer"])
-    if data.get("id") and "subscription" in event.get("type", ""):
-        subscription.stripe_subscription_id = str(data["id"])
-    metadata = data.get("metadata", {}) or {}
-    tier = metadata.get("tier", "")
-    if tier in {"free", "pro", "team"}:
-        subscription.tier = tier
-    event_type = event.get("type", "")
-    if event_type.endswith("deleted"):
-        subscription.status = "cancelled"
-    elif event_type.endswith("payment_failed"):
-        subscription.status = "past_due"
-    elif event_type:
-        subscription.status = "active"
-    return subscription
-
-
 def can_edit(role: str) -> bool:
     return role in {"owner", "admin", "member"}

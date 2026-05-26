@@ -78,6 +78,7 @@ export type Session = {
   authenticated: boolean;
   user?: { id: string; email: string };
   team?: { id: string; name: string };
+  subscription?: { tier: string; status: string };
   role?: string;
 };
 

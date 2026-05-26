@@ -15,6 +15,23 @@ const SUGGESTED_QUERIES = [
   "Evaluation of large language model reasoning capabilities",
 ];
 
+const SOURCES = [
+  { key: "arxiv", label: "arXiv" },
+  { key: "semantic_scholar", label: "Semantic Scholar" },
+  { key: "pubmed", label: "PubMed" },
+  { key: "openalex", label: "OpenAlex" },
+  { key: "core", label: "CORE" },
+  { key: "crossref", label: "CrossRef" },
+];
+
+const PROVIDERS = [
+  { key: "", label: "Auto" },
+  { key: "openai", label: "OpenAI" },
+  { key: "groq", label: "Groq" },
+  { key: "huggingface", label: "HuggingFace" },
+  { key: "ollama", label: "Ollama" },
+];
+
 type BriefResult = {
   error?: string;
   brief?: {
@@ -35,17 +52,31 @@ export default function WorkspacePage() {
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState("");
   const [result, setResult] = useState<BriefResult | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
+  const [provider, setProvider] = useState("");
+  const [webSearch, setWebSearch] = useState(false);
 
   const project = projects?.find((p) => p.id === projectId);
   const brief = project?.briefs?.[0];
   const evidence = brief?.evidence_items ?? [];
+
+  function toggleSource(key: string) {
+    setSelectedSources((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }
 
   async function runQuestion() {
     if (!question.trim()) return;
     setBusy("run");
     setResult(null);
     try {
-      const res = await postApi<BriefResult>(`/api/projects/${projectId}/questions/run`, { question, max_papers: 6, use_memory: true });
+      const body: Record<string, unknown> = { question, max_papers: 6, use_memory: true };
+      if (selectedSources.length > 0) body.sources = selectedSources;
+      if (provider) body.provider = provider;
+      if (webSearch) body.web_search = true;
+      const res = await postApi<BriefResult>(`/api/projects/${projectId}/questions/run`, body);
       setResult(res);
       await mutate();
     } catch (err) {
@@ -99,7 +130,63 @@ export default function WorkspacePage() {
                   >
                     Suggest Query
                   </button>
+                  <button
+                    className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                  >
+                    {showAdvanced ? "Hide" : "Show"} Advanced
+                  </button>
                 </div>
+
+                {showAdvanced && (
+                  <div className="mt-2 grid gap-4 rounded-md border border-slate-200 bg-slate-50 p-4">
+                    <div>
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Paper Sources</span>
+                      <p className="mb-2 text-xs text-slate-400">Leave all unchecked to use all available sources.</p>
+                      <div className="flex flex-wrap gap-3">
+                        {SOURCES.map((s) => (
+                          <label key={s.key} className="flex items-center gap-1.5 text-sm text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={selectedSources.includes(s.key)}
+                              onChange={() => toggleSource(s.key)}
+                              className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
+                            />
+                            {s.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-6">
+                      <div>
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">AI Provider</span>
+                        <select
+                          value={provider}
+                          onChange={(e) => setProvider(e.target.value)}
+                          className="mt-1 rounded-md border border-slate-300 p-2 text-sm"
+                        >
+                          {PROVIDERS.map((p) => (
+                            <option key={p.key} value={p.key}>{p.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Web Search</span>
+                        <label className="mt-1 flex items-center gap-1.5 text-sm text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={webSearch}
+                            onChange={(e) => setWebSearch(e.target.checked)}
+                            className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
+                          />
+                          Enable Tavily web search
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </Panel>
 
@@ -181,12 +268,13 @@ export default function WorkspacePage() {
                   <p>Enter a research question above and click <strong>Run Investigation</strong> to generate a citation-grounded research brief.</p>
                   <p>The system will:</p>
                   <ol className="list-inside list-decimal space-y-1">
-                    <li>Search relevant literature from arXiv and Semantic Scholar</li>
+                    <li>Search relevant literature from arXiv, Semantic Scholar, OpenAlex, CORE, CrossRef, and PubMed</li>
                     <li>Extract claims, methods, datasets, and limitations</li>
                     <li>Compare papers in a structured methodology matrix</li>
                     <li>Generate a grounded research brief with citations</li>
                     <li>Suggest experiment plans, hypotheses, and next directions</li>
                   </ol>
+                  <p className="mt-2 text-xs text-slate-400">Click <strong>Show Advanced</strong> to select specific sources, AI provider, or enable web search.</p>
                 </div>
               </Panel>
             )}

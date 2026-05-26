@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
+import logging
+import os
 import re
+import urllib.request
 
 from .ai_providers import AIProvider, DeterministicProvider
 from .embeddings import memory_relevance
@@ -19,11 +23,38 @@ from .models import (
 )
 from .retrieval import SearchService
 
+logger = logging.getLogger(__name__)
+
+
+def tavily_web_search(query: str, max_results: int = 5) -> list[dict]:
+    api_key = os.getenv("TAVILY_API_KEY", "")
+    if not api_key:
+        logger.info("Tavily search skipped: TAVILY_API_KEY not set")
+        return []
+    try:
+        payload = json.dumps({"api_key": api_key, "query": query, "search_depth": "basic", "include_answer": True, "max_results": max_results}).encode("utf-8")
+        request = urllib.request.Request("https://api.tavily.com/search", data=payload, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(request, timeout=10) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        results = data.get("results", [])
+        for r in results:
+            r["source"] = "tavily"
+        return results
+    except Exception as exc:
+        logger.warning("Tavily search failed: %s", exc)
+        return []
+
 
 class ResearchOrchestrator:
-    def __init__(self, search_service: SearchService | None = None, ai_provider: AIProvider | None = None):
+    def __init__(self, search_service: SearchService | None = None, ai_provider: AIProvider | None = None, web_search_enabled: bool | None = None):
         self.search_service = search_service or SearchService()
         self.ai_provider = ai_provider or DeterministicProvider()
+        self.web_search_enabled = web_search_enabled if web_search_enabled is not None else bool(os.getenv("TAVILY_API_KEY", ""))
+
+    def web_search(self, query: str, max_results: int = 5) -> list[dict]:
+        if not self.web_search_enabled:
+            return []
+        return tavily_web_search(query, max_results=max_results)
 
     def run(
         self,
@@ -31,6 +62,8 @@ class ResearchOrchestrator:
         max_papers: int = 6,
         memory: list[MemoryItem] | None = None,
         extra_sources=None,
+        sources: list[str] | None = None,
+        web_search: bool | None = None,
     ) -> tuple[AgentRun, ResearchBrief]:
         run = AgentRun(id=new_id("run"), question_id=question.id, status="running", started_at=utc_now(), provider=self.ai_provider.name)
         memory_scores = memory_relevance(question.text, memory or [])
@@ -47,7 +80,7 @@ class ResearchOrchestrator:
             )
         )
 
-        papers = self.search_service.search(question.text, max_papers=max_papers, extra_sources=extra_sources or [])
+        papers = self.search_service.search(question.text, max_papers=max_papers, extra_sources=extra_sources or [], sources=sources)
         run.steps.append(
             AgentStep(
                 name="Search Agent",

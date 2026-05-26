@@ -1,10 +1,55 @@
 from __future__ import annotations
 
+import json
+import logging
+import os
 import re
+import urllib.request
+from io import BytesIO
 from pathlib import Path
 
 from .intelligence import extract_from_chunks
 from .models import DocumentChunk, IngestionRun, PaperSource, UploadedPaper, new_id, utc_now
+
+logger = logging.getLogger(__name__)
+
+
+def parse_with_unstructured(content: bytes, filename: str) -> list[tuple[int, str]] | None:
+    api_key = os.getenv("UNSTRUCTURED_API_KEY", "")
+    if not api_key:
+        return None
+    try:
+        boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+        body = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="files"; filename="{filename}"\r\n'
+            f"Content-Type: application/pdf\r\n\r\n"
+        ).encode("utf-8") + content + f"\r\n--{boundary}--\r\n".encode("utf-8")
+        request = urllib.request.Request(
+            "https://api.unstructured.io/general/v0/general",
+            data=body,
+            headers={
+                "accept": "application/json",
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": f"multipart/form-data; boundary={boundary}",
+            },
+        )
+        with urllib.request.urlopen(request, timeout=30) as response:
+            elements = json.loads(response.read().decode("utf-8"))
+        pages: dict[int, list[str]] = {}
+        for element in elements:
+            text = element.get("text", "").strip()
+            metadata = element.get("metadata", {}) or {}
+            page_num = metadata.get("page_number", 1)
+            if text:
+                pages.setdefault(page_num, []).append(text)
+        result = [(page, " ".join(texts)) for page, texts in sorted(pages.items())]
+        if result:
+            logger.info("Unstructured parsed %d pages from %s", len(result), filename)
+            return result
+    except Exception as exc:
+        logger.warning("Unstructured API failed, falling back to local parser: %s", exc)
+    return None
 
 
 def ingest_pdf_bytes(
@@ -21,7 +66,7 @@ def ingest_pdf_bytes(
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
 
-    pages = extract_pdf_pages(content)
+    pages = parse_with_unstructured(content, filename) or extract_pdf_pages(content)
     chunks = [
         DocumentChunk(id=new_id("chunk"), paper_id=paper_id, page_number=page_number, text=text[:4000], created_at=utc_now())
         for page_number, text in pages
@@ -60,8 +105,6 @@ def ingest_pdf_bytes(
 
 def extract_pdf_pages(content: bytes) -> list[tuple[int, str]]:
     try:
-        from io import BytesIO
-
         from pypdf import PdfReader  # type: ignore
 
         reader = PdfReader(BytesIO(content))

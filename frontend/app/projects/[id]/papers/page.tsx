@@ -17,6 +17,7 @@ export default function PapersPage() {
   const { data: projects, mutate, isLoading } = useSWR<Project[]>("/api/v1/projects", api);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [useUnstructured, setUseUnstructured] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const project = projects?.find((p) => p.id === projectId);
   const papers = project?.uploaded_papers ?? [];
@@ -29,7 +30,9 @@ export default function PapersPage() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch(`/api/projects/${projectId}/papers/upload?filename=${encodeURIComponent(file.name)}`, {
+      let url = `/api/projects/${projectId}/papers/upload?filename=${encodeURIComponent(file.name)}`;
+      if (useUnstructured) url += "&parser=unstructured";
+      const res = await fetch(url, {
         method: "POST",
         credentials: "include",
         body: fd,
@@ -65,6 +68,15 @@ export default function PapersPage() {
                 {uploading ? "Uploading..." : "Upload"}
               </button>
             </div>
+            <label className="mt-3 flex items-center gap-1.5 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={useUnstructured}
+                onChange={(e) => setUseUnstructured(e.target.checked)}
+                className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
+              />
+              Use Unstructured API for enhanced PDF parsing (requires UNSTRUCTURED_API_KEY)
+            </label>
             {uploadError && <p className="mt-2 text-sm text-red-600">{uploadError}</p>}
           </Panel>
         </div>
