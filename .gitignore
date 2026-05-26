@@ -5,6 +5,7 @@ pytest-cache-files-*/
 data/
 storage/
 .env
+.env.production
 *.egg-info/
 .coverage*
 htmlcov/
