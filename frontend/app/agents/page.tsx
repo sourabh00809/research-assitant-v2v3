@@ -10,12 +10,6 @@ import { Panel, EmptyState, LoadingSpinner } from "../../components/ui";
 import SidebarLayout from "../../components/SidebarLayout";
 import AgentRunCard from "../../components/AgentRunCard";
 
-const SUGGESTED_QUERIES = [
-  "Retrieval-Augmented Generation for knowledge-intensive tasks",
-  "Multi-agent systems for scientific discovery",
-  "Evaluation of large language model reasoning capabilities",
-];
-
 export default function AgentsPage() {
   const router = useRouter();
   const { session } = useSession();
@@ -49,8 +43,7 @@ export default function AgentsPage() {
   async function runAgentStep() {
     if (!active || !runnableRun) return;
     await withAction("step", async () => {
-      const query = SUGGESTED_QUERIES[Math.floor(Math.random() * SUGGESTED_QUERIES.length)];
-      await postApi(`/api/v1/agent-runs/${runnableRun.id}/step?project_id=${active.id}`, { query });
+      await postApi(`/api/v1/agent-runs/${runnableRun.id}/step?project_id=${active.id}`, {});
       await refreshProjects();
     });
   }

@@ -34,9 +34,9 @@ def recommend(brief: ResearchBrief | None, question: str = "", domain: str | Non
         "domain": domain or inferred_domain,
         "task": task or inferred_task,
         "template_id": template_id,
-        "datasets": [item.model_dump() for item in datasets],
-        "baselines": [item.model_dump() for item in baselines],
-        "metrics": [item.model_dump() for item in metrics],
+        "datasets": [item.name for item in datasets],
+        "baselines": [item.name for item in baselines],
+        "metrics": [item.name for item in metrics],
         "ablation_vars": template.get("ablation_vars", []),
         "validation": template.get("validation", "5-fold cross-validation"),
     }

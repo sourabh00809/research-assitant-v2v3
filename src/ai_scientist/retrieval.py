@@ -119,7 +119,8 @@ class SearchService:
             papers.extend(core)
             papers.extend(crossref)
 
-        papers.extend(SEED_CORPUS)
+        if not self.live_search:
+            papers.extend(SEED_CORPUS)
         ranked = rank_papers(question, dedupe_papers(papers))
         return ranked[:max_papers]
 

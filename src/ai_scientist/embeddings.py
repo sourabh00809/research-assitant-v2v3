@@ -11,7 +11,7 @@ from .models import ChunkRankingResult, DocumentChunk, EmbeddingRecord, MemoryIt
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_EMBEDDING_MODEL = "deterministic-hash-v1"
+DEFAULT_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 VECTOR_DIMENSIONS = 96
 
 SYNONYM_GROUPS = [

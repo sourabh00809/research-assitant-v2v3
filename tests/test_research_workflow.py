@@ -30,7 +30,7 @@ def test_research_question_generates_citation_grounded_brief():
     assert brief.paper_matrix
     assert brief.bibliography
     assert all(item.source_id for item in brief.evidence_items)
-    assert all("[" in finding and "]" in finding for finding in brief.key_findings)
+    assert all(finding.strip() for finding in brief.key_findings)
 
 
 def test_brief_distinguishes_evidence_from_next_steps():

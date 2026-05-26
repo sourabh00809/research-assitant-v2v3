@@ -541,10 +541,7 @@ def migration_bootstrap_sql() -> str:
 
 @app.get("/api/projects", response_model=list[ResearchProject])
 def list_projects() -> list[ResearchProject]:
-    projects = STORE.list_projects()
-    if not projects:
-        return [create_default_project()]
-    return projects
+    return STORE.list_projects()
 
 
 @app.delete("/api/projects/{project_id}")
@@ -1278,7 +1275,9 @@ def export_brief_tex(project_id: str, brief_id: str) -> PlainTextResponse:
 
 @app.post("/api/v1/agents", response_model=ResearchProject)
 def create_agent(request: CreateAgentRequest, project_id: str = "") -> ResearchProject:
-    project = STORE.get_project(project_id) if project_id else create_default_project()
+    project = STORE.get_project(project_id) if project_id else None
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found or no default project")
     agent = AgentDefinition(
         id=new_id("agent"),
         project_id=project.id,
@@ -1436,7 +1435,7 @@ def admin_health() -> dict:
         "storage": storage_health(),
         "sandbox": {"backend": settings.sandbox_backend, "image": settings.sandbox_image},
         "connectors": [item.model_dump(mode="json") for item in ORCHESTRATOR.search_service.connector_status()],
-        "billing": "mock-upgrade",
+        "billing": {"tier": "free", "status": "dev_mode"},
     }
 
 
@@ -1463,17 +1462,6 @@ def resolve_experiment_plan(project: ResearchProject, plan_id: str | None) -> Ex
             raise HTTPException(status_code=404, detail="Experiment plan not found")
         return plan
     return project.experiment_plans[0] if project.experiment_plans else None
-
-
-def create_default_project() -> ResearchProject:
-    project = ResearchProject(
-        id=new_id("project"),
-        name="AI Research OS Demo",
-        description="A starter workspace for citation-grounded literature investigation.",
-        created_at=utc_now(),
-    )
-    STORE.save_project(project)
-    return project
 
 
 def v2_v3_workspace_html() -> str:

@@ -13,11 +13,11 @@ services:
       - key: AI_SCIENTIST_DISABLE_AUTH
         value: "0"
       - key: AI_SCIENTIST_AI_PROVIDER
-        value: deterministic
+        value: auto
       - key: AI_SCIENTIST_MODEL
-        value: gpt-4.1-mini
+        value: mixtral-8x7b-32768
       - key: AI_SCIENTIST_LIVE_SEARCH
-        value: "0"
+        value: "1"
       - key: AI_SCIENTIST_COOKIE_SECURE
         value: "true"
       - key: AI_SCIENTIST_COOKIE_SAMESITE
@@ -33,9 +33,11 @@ services:
       - key: AI_SCIENTIST_OPENALEX_ENABLED
         value: "true"
       - key: AI_SCIENTIST_CORE_ENABLED
-        value: "true"
+        value: "false"
       - key: AI_SCIENTIST_CROSSREF_ENABLED
         value: "true"
+      - key: AI_SCIENTIST_EMBEDDING_MODEL
+        value: sentence-transformers/all-MiniLM-L6-v2
       - key: AI_SCIENTIST_GROQ_ENABLED
         value: "true"
       - key: AI_SCIENTIST_PUBLIC_BASE_URL

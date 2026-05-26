@@ -42,7 +42,7 @@ class Settings:
         self.disable_auth = os.getenv("AI_SCIENTIST_DISABLE_AUTH", "").lower() in {"1", "true", "yes"}
         self.live_search = os.getenv("AI_SCIENTIST_LIVE_SEARCH", "1") == "1"
         self.embedding_provider = os.getenv("AI_SCIENTIST_EMBEDDING_PROVIDER", "local").lower()
-        self.embedding_model = os.getenv("AI_SCIENTIST_EMBEDDING_MODEL", "deterministic-hash-v1")
+        self.embedding_model = os.getenv("AI_SCIENTIST_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
         self.pubmed_enabled = os.getenv("AI_SCIENTIST_PUBMED_ENABLED", "false").lower() == "true"
         self.ncbi_api_key = os.getenv("NCBI_API_KEY", "")
         self.hf_enabled = os.getenv("AI_SCIENTIST_HF_ENABLED", "false").lower() == "true"

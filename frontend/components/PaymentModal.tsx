@@ -12,10 +12,10 @@ interface PaymentModalProps {
 
 export function PaymentModal({ tier, price, name, onSuccess, onCancel }: PaymentModalProps) {
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
-  const [cardNumber, setCardNumber] = useState("4242 4242 4242 4242");
-  const [expiry, setExpiry] = useState("12/28");
-  const [cvv, setCvv] = useState("123");
-  const [cardName, setCardName] = useState("Test User");
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [cardName, setCardName] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
