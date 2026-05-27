@@ -37,7 +37,7 @@ export default function SettingsPage() {
   }
 
   if (!isLoaded) return <SidebarLayout><LoadingSpinner text="Loading..." /></SidebarLayout>;
-  if (!isSignedIn) { router.replace("/sign-in"); return null; }
+  if (!isSignedIn) { router.replace("/login"); return null; }
 
   return (
     <SidebarLayout>

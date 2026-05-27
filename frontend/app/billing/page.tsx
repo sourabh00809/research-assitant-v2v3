@@ -21,7 +21,7 @@ export default function BillingPage() {
   const [currentTier, setCurrentTier] = useState("free");
 
   if (!isLoaded) return <LoadingSpinner text="Loading..." />;
-  if (!isSignedIn) { router.replace("/sign-in"); return null; }
+  if (!isSignedIn) { router.replace("/login"); return null; }
 
   async function handleUpgrade() {
     if (!selected) return;

@@ -14,7 +14,7 @@ export default function Home() {
     if (isSignedIn) {
       router.replace("/projects");
     } else {
-      router.replace("/sign-in");
+      router.replace("/login");
     }
   }, [isLoaded, isSignedIn, router]);
 

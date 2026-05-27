@@ -64,7 +64,7 @@ export default function AgentsPage() {
   }
 
   if (!isLoaded) return <SidebarLayout><LoadingSpinner text="Loading agents..." /></SidebarLayout>;
-  if (!isSignedIn) { router.replace("/sign-in"); return null; }
+  if (!isSignedIn) { router.replace("/login"); return null; }
 
   if (isLoading) return <SidebarLayout><LoadingSpinner text="Loading agents..." /></SidebarLayout>;
 

@@ -69,7 +69,7 @@ export default function DashboardPage() {
 
   if (!isLoaded) return <LoadingSpinner text="Loading..." />;
   if (!isSignedIn) {
-    router.replace("/sign-in");
+    router.replace("/login");
     return null;
   }
 

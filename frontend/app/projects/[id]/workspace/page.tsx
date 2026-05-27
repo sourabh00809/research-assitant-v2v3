@@ -80,7 +80,7 @@ export default function WorkspacePage() {
   }
 
   if (!isLoaded) return <LoadingSpinner text="Loading..." />;
-  if (!isSignedIn) { router.replace("/sign-in"); return null; }
+  if (!isSignedIn) { router.replace("/login"); return null; }
 
   return (
     <SidebarLayout>

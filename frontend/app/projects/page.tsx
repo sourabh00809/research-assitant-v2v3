@@ -33,7 +33,7 @@ export default function ProjectsPage() {
   }
 
   if (!isLoaded) return <LoadingSpinner text="Loading..." />;
-  if (!isSignedIn) { router.replace("/sign-in"); return null; }
+  if (!isSignedIn) { router.replace("/login"); return null; }
 
   const totalBriefs = projects?.reduce((s, p) => s + (p.briefs?.length ?? 0), 0) ?? 0;
   const totalPlans = projects?.reduce((s, p) => s + (p.experiment_plans?.length ?? 0), 0) ?? 0;

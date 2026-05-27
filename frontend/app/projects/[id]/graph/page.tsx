@@ -109,7 +109,7 @@ export default function GraphPage() {
   }, []);
 
   if (!isLoaded) return <SidebarLayout><LoadingSpinner text="Loading graph..." /></SidebarLayout>;
-  if (!isSignedIn) { router.replace("/sign-in"); return null; }
+  if (!isSignedIn) { router.replace("/login"); return null; }
 
   if (projectsLoading || !graphData) return <SidebarLayout><LoadingSpinner text="Loading research graph..." /></SidebarLayout>;
 

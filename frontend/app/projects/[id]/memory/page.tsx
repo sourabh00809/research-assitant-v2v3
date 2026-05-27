@@ -18,7 +18,7 @@ export default function MemoryPage() {
   const memory = project?.memory ?? [];
 
   if (!isLoaded) return <SidebarLayout><LoadingSpinner text="Loading research memory..." /></SidebarLayout>;
-  if (!isSignedIn) { router.replace("/sign-in"); return null; }
+  if (!isSignedIn) { router.replace("/login"); return null; }
 
   if (isLoading) return <SidebarLayout><LoadingSpinner text="Loading research memory..." /></SidebarLayout>;
 
