@@ -25,6 +25,8 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 
+from .rbac import require_role
+
 from .agents import ResearchOrchestrator
 from .ai_providers import build_provider
 from .autonomous import (
@@ -124,7 +126,7 @@ async def lifespan(application: FastAPI):
 
 
 app = FastAPI(
-    title="AI Scientist Platform",
+    title="Research Assistant",
     description="Citation-grounded research intelligence workspace.",
     version="0.1.1",
     lifespan=lifespan,
@@ -200,7 +202,7 @@ def next_app_placeholder() -> HTMLResponse:
 def health() -> dict:
     return {
         "status": "ok",
-        "product": "AI Scientist Platform",
+        "product": "Research Assistant",
         "mode": "research-intelligence-beta",
         "storage": settings.store_backend or "sqlite",
         "ai_provider": settings.ai_provider,
@@ -231,6 +233,7 @@ def require_project_access(request: Request, project_id: str, minimum_role: str 
     clerk_user = current_clerk_user(request)
     if not clerk_user:
         raise HTTPException(status_code=401, detail="Authentication required")
+    require_role(clerk_user.role, minimum_role)
 
 
 @app.post("/api/v1/tenancy/bootstrap")
@@ -325,7 +328,7 @@ def get_job(job_id: str) -> dict:
 
 @app.get("/api/v1/admin/live")
 def admin_live() -> dict:
-    return {"status": "live", "product": "AI Scientist Platform"}
+    return {"status": "live", "product": "Research Assistant"}
 
 
 @app.get("/api/v1/admin/ready")
@@ -1064,7 +1067,7 @@ def export_brief_pdf(project_id: str, brief_id: str) -> Response:
 @app.get("/api/projects/{project_id}/briefs/{brief_id}/export.tex", response_class=PlainTextResponse)
 def export_brief_tex(project_id: str, brief_id: str) -> PlainTextResponse:
     markdown = export_brief(project_id, brief_id).body.decode("utf-8")
-    tex = "\\section*{AI Scientist Brief}\n\\begin{verbatim}\n" + markdown + "\\end{verbatim}\n"
+    tex = "\\section*{Research Brief}\n\\begin{verbatim}\n" + markdown + "\\end{verbatim}\n"
     return PlainTextResponse(tex, media_type="application/x-tex")
 
 
@@ -1264,7 +1267,7 @@ def v2_v3_workspace_html() -> str:
 <!doctype html>
 <html>
 <head>
-  <title>AI Scientist V2/V3 Workspace</title>
+  <title>Research Assistant Workspace</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body{margin:0;background:#f7f8f5;color:#17211f;font-family:Inter,ui-sans-serif,system-ui,sans-serif}
@@ -1285,7 +1288,7 @@ def v2_v3_workspace_html() -> str:
   <header>
     <div>
       <p class="eyebrow">V2/V3 Research OS</p>
-      <h1>AI Scientist Workspace</h1>
+      <h1>Research Assistant Workspace</h1>
       <p class="muted">Multi-user SaaS foundations, agents, approvals, billing, jobs, storage, and platform health.</p>
     </div>
     <div class="actions">

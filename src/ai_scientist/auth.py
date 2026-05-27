@@ -123,14 +123,14 @@ def login_page(error: str = "") -> HTMLResponse:
     message = f"<p class='error'>{error}</p>" if error else ""
     return HTMLResponse(
         f"""<!doctype html>
-<html><head><title>AI Scientist Login</title><style>
+<html><head><title>Research Assistant Login</title><style>
 body{{font-family:system-ui;background:#f6f4ef;color:#18211f;display:grid;place-items:center;height:100vh;margin:0}}
 form{{background:white;border:1px solid #d8d6cd;border-radius:8px;padding:28px;display:grid;gap:12px;min-width:320px}}
 input,button{{font:inherit;padding:12px;border-radius:6px;border:1px solid #d8d6cd}}
 button{{background:#1f7a68;color:white;font-weight:800;cursor:pointer}}
 .error{{color:#a8452c;margin:0}}
 </style></head><body><form method="post" action="/api/login">
-<h1>AI Scientist</h1>{message}
+<h1>Research Assistant</h1>{message}
 <input name="password" type="password" placeholder="Password" autofocus />
 <button type="submit">Enter workspace</button>
 </form></body></html>"""

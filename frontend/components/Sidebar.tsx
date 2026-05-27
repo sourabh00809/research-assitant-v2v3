@@ -54,7 +54,7 @@ export default function Sidebar() {
     <aside className="flex w-60 flex-col border-r border-slate-200 bg-white">
       <div className="border-b border-slate-200 px-4 py-4">
         <Link href="/projects" className="text-xs font-bold uppercase tracking-wide text-emerald-700 hover:text-emerald-600">
-          AI Scientist
+          Research Assistant
         </Link>
         <p className="mt-1 truncate text-xs text-slate-500">{user?.primaryEmailAddress?.emailAddress ?? "Researcher"}</p>
       </div>
@@ -102,7 +102,7 @@ export default function Sidebar() {
       <div className="border-t border-slate-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-            admin
+            {user?.primaryEmailAddress?.emailAddress === "sourabhnokhwal7@gmail.com" ? "admin" : "user"}
           </span>
           <Link href="/projects" className="text-xs text-emerald-600 hover:text-emerald-700">
             Projects

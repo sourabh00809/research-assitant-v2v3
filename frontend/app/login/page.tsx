@@ -18,7 +18,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-cream">
       <div className="w-full max-w-md rounded-md border border-slate-300 bg-white p-8 text-center">
-        <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">AI Scientist</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Research Assistant</p>
         <h1 className="mt-2 text-2xl font-bold">Sign in to continue</h1>
         <p className="mt-1 text-sm text-slate-600">Click the button below to sign in with Clerk.</p>
         <SignInButton mode="modal">

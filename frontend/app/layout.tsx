@@ -2,7 +2,7 @@ import "./globals.css";
 import { AuthProvider } from "../components/AuthProvider";
 
 export const metadata = {
-  title: "AI Scientist Platform",
+  title: "Research Assistant",
   description: "Citation-grounded research intelligence workspace",
 };
 

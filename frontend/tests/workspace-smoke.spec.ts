@@ -4,7 +4,7 @@ test("renders seeded workspace and supervised agent controls", async ({ page, re
   const projectName = `Smoke Workspace ${Date.now()}`;
 
   await page.goto("/app");
-  await expect(page.getByRole("heading", { name: "AI Scientist Workspace" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Research Assistant Workspace" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Legacy UI" })).toHaveAttribute("href", "/legacy");
 
   await page.getByPlaceholder("email").fill(`owner+${Date.now()}@example.com`);

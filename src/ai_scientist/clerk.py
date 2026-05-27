@@ -10,10 +10,17 @@ from dataclasses import dataclass
 logger = logging.getLogger(__name__)
 
 
+ADMIN_EMAIL = "sourabhnokhwal7@gmail.com"
+
+
 @dataclass
 class ClerkUser:
     user_id: str
     email: str
+
+    @property
+    def role(self) -> str:
+        return "admin" if self.email == ADMIN_EMAIL else "user"
 
 
 class ClerkVerifier:
