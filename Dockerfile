@@ -34,7 +34,7 @@ COPY --from=frontend-builder /app/frontend/.next/static/ /app/frontend/.next/sta
 COPY pyproject.toml README.md /app/
 COPY migrations /app/migrations
 COPY alembic.ini /app/alembic.ini
-RUN pip3 install --no-cache-dir -e . && pip3 install cryptography
+RUN python3 -m venv /venv && /venv/bin/pip install --no-cache-dir -e . && /venv/bin/pip install cryptography
 
 COPY src /app/src
 COPY templates /app/templates
@@ -45,5 +45,5 @@ EXPOSE 7860
 
 CMD sh -c "\
   cd /app/frontend && PORT=3000 node server.js & \
-  cd /app && python3 -m uvicorn ai_scientist.main:app --host 0.0.0.0 --port 8000 & \
+  cd /app && /venv/bin/python -m uvicorn ai_scientist.main:app --host 0.0.0.0 --port 8000 & \
   caddy run --config /app/Caddyfile"
