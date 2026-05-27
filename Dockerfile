@@ -25,7 +25,6 @@ RUN apt-get update \
     && chmod +x /usr/bin/caddy
 
 COPY --from=frontend-builder /app/frontend/.next/ /app/frontend/.next/
-COPY --from=frontend-builder /app/frontend/public/ /app/frontend/public/
 COPY --from=frontend-builder /app/frontend/package.json /app/frontend/package.json
 
 COPY pyproject.toml README.md /app/
