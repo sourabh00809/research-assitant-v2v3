@@ -5,7 +5,7 @@ ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_cmljaC1hYXJkdmFyay04MC5jbGVyay5hY2
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci --omit=dev
 
 COPY frontend/ ./
 RUN npm run build
@@ -24,8 +24,10 @@ RUN apt-get update \
     && curl -fsSL "https://caddyserver.com/api/download?os=linux&arch=amd64" -o /usr/bin/caddy \
     && chmod +x /usr/bin/caddy
 
-COPY --from=frontend-builder /app/frontend/.next/ /app/frontend/.next/
+COPY --from=frontend-builder /app/frontend/.next /app/frontend/.next
+COPY --from=frontend-builder /app/frontend/node_modules /app/frontend/node_modules
 COPY --from=frontend-builder /app/frontend/package.json /app/frontend/package.json
+COPY --from=frontend-builder /app/frontend/next.config.mjs /app/frontend/next.config.mjs
 
 COPY pyproject.toml README.md /app/
 COPY migrations /app/migrations
@@ -39,7 +41,7 @@ COPY Caddyfile.prod /app/Caddyfile
 EXPOSE 7860
 
 CMD sh -c "\
-  cd /app/frontend/.next/standalone && HOSTNAME=0.0.0.0 PORT=3000 node server.js 2>/tmp/node.log & \
+  cd /app/frontend && node node_modules/.bin/next start -p 3000 2>/tmp/node.log & \
   cd /app && python3 -m uvicorn ai_scientist.main:app --host 0.0.0.0 --port 8000 2>/tmp/python.log & \
   sleep 3 && echo '=== Node log ===' && cat /tmp/node.log && echo '=== Python log ===' && cat /tmp/python.log && \
   echo '=== Starting Caddy ===' && caddy run --config /app/Caddyfile"
