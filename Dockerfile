@@ -5,7 +5,7 @@ ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_cmljaC1hYXJkdmFyay04MC5jbGVyay5hY2
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
-RUN npm install --omit=dev
+RUN npm install
 
 COPY frontend/ ./
 RUN npm run build
