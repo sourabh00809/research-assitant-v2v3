@@ -34,10 +34,9 @@ COPY --from=frontend-builder /app/frontend/.next/static/ /app/frontend/.next/sta
 COPY pyproject.toml README.md /app/
 COPY migrations /app/migrations
 COPY alembic.ini /app/alembic.ini
-RUN pip3 install --no-cache-dir --break-system-packages -e . && pip3 install --break-system-packages cryptography
-
 COPY src /app/src
 COPY templates /app/templates
+RUN pip3 install --no-cache-dir --break-system-packages -e . && pip3 install --break-system-packages cryptography
 
 COPY Caddyfile.prod /app/Caddyfile
 
