@@ -24,8 +24,9 @@ RUN apt-get update \
     && curl -fsSL "https://caddyserver.com/api/download?os=linux&arch=amd64" -o /usr/bin/caddy \
     && chmod +x /usr/bin/caddy
 
-COPY --from=frontend-builder /app/frontend/.next/standalone/ /app/frontend/
-COPY --from=frontend-builder /app/frontend/.next/static/ /app/frontend/.next/static/
+COPY --from=frontend-builder /app/frontend/.next/ /app/frontend/.next/
+COPY --from=frontend-builder /app/frontend/public/ /app/frontend/public/
+COPY --from=frontend-builder /app/frontend/package.json /app/frontend/package.json
 
 COPY pyproject.toml README.md /app/
 COPY migrations /app/migrations
@@ -39,7 +40,7 @@ COPY Caddyfile.prod /app/Caddyfile
 EXPOSE 7860
 
 CMD sh -c "\
-  cd /app/frontend && HOSTNAME=0.0.0.0 PORT=3000 node server.js 2>/tmp/node.log & \
+  cd /app/frontend && HOSTNAME=0.0.0.0 PORT=3000 node .next/standalone/server.js 2>/tmp/node.log & \
   cd /app && python3 -m uvicorn ai_scientist.main:app --host 0.0.0.0 --port 8000 2>/tmp/python.log & \
   sleep 3 && echo '=== Node log ===' && cat /tmp/node.log && echo '=== Python log ===' && cat /tmp/python.log && \
   echo '=== Starting Caddy ===' && caddy run --config /app/Caddyfile"
