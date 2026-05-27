@@ -4,14 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import type { Project } from "../../lib/api";
+import { useAuth } from "@clerk/nextjs";
 import { api, postApi } from "../../lib/api";
-import { useSession } from "../../components/AuthProvider";
 import { Panel, EmptyState, LoadingSpinner, MetricCard } from "../../components/ui";
 import SidebarLayout from "../../components/SidebarLayout";
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { session } = useSession();
+  const { isLoaded, isSignedIn } = useAuth();
   const { data: projects, error, mutate, isLoading } = useSWR<Project[]>("/api/v1/projects", api);
   const [busy, setBusy] = useState(false);
   const [createError, setCreateError] = useState("");
@@ -32,7 +32,8 @@ export default function ProjectsPage() {
     setBusy(false);
   }
 
-  if (!session?.authenticated) { router.replace("/login"); return null; }
+  if (!isLoaded) return <LoadingSpinner text="Loading..." />;
+  if (!isSignedIn) { router.replace("/sign-in"); return null; }
 
   const totalBriefs = projects?.reduce((s, p) => s + (p.briefs?.length ?? 0), 0) ?? 0;
   const totalPlans = projects?.reduce((s, p) => s + (p.experiment_plans?.length ?? 0), 0) ?? 0;

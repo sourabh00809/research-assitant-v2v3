@@ -17,7 +17,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import type { Project } from "../../../../lib/api";
 import { api } from "../../../../lib/api";
-import { useSession } from "../../../../components/AuthProvider";
+import { useAuth } from "@clerk/nextjs";
 import { Panel, LoadingSpinner } from "../../../../components/ui";
 import SidebarLayout from "../../../../components/SidebarLayout";
 
@@ -55,7 +55,7 @@ const NODE_COLORS: Record<string, string> = {
 export default function GraphPage() {
   const params = useParams();
   const router = useRouter();
-  const { session } = useSession();
+  const { isLoaded, isSignedIn } = useAuth();
   const projectId = params.id as string;
   const { data: projects, isLoading: projectsLoading } = useSWR<Project[]>("/api/v1/projects", api);
   const [graphData, setGraphData] = useState<GraphData | null>(null);
@@ -108,7 +108,8 @@ export default function GraphPage() {
     setSelectedNode(node);
   }, []);
 
-  if (!session?.authenticated) { router.replace("/login"); return null; }
+  if (!isLoaded) return <SidebarLayout><LoadingSpinner text="Loading graph..." /></SidebarLayout>;
+  if (!isSignedIn) { router.replace("/sign-in"); return null; }
 
   if (projectsLoading || !graphData) return <SidebarLayout><LoadingSpinner text="Loading research graph..." /></SidebarLayout>;
 

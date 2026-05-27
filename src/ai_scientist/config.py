@@ -22,7 +22,7 @@ class Settings:
         self.supabase_url = os.getenv("SUPABASE_URL", "")
         self.supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
         self.supabase_anon_key = os.getenv("SUPABASE_ANON_KEY", "")
-        self.supabase_storage_bucket = os.getenv("SUPABASE_STORAGE_BUCKET", "research-assets")
+        self.supabase_storage_bucket = os.getenv("SUPABASE_STORAGE_BUCKET", "research-pdfs")
         self.groq_api_key = os.getenv("GROQ_API_KEY", "")
         self.tavily_api_key = os.getenv("TAVILY_API_KEY", "")
         self.unstructured_api_key = os.getenv("UNSTRUCTURED_API_KEY", "")
@@ -61,6 +61,9 @@ class Settings:
         self.limit_team_agent_runs = int(os.getenv("AI_SCIENTIST_LIMIT_TEAM_AGENT_RUNS", "5000"))
         self.limit_team_projects = int(os.getenv("AI_SCIENTIST_LIMIT_TEAM_PROJECTS", "1000"))
         self.limit_team_storage_mb = int(os.getenv("AI_SCIENTIST_LIMIT_TEAM_STORAGE_MB", "100000"))
+        self.clerk_secret_key = os.getenv("CLERK_SECRET_KEY", "")
+        self.clerk_publishable_key = os.getenv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "")
+        self.resend_api_key = os.getenv("RESEND_API_KEY", "")
 
     @property
     def production(self) -> bool:
@@ -71,17 +74,6 @@ class Settings:
         if self.store_backend:
             return self.store_backend
         return "postgres" if self.production and self.database_url else "sqlite"
-
-    def validate(self) -> None:
-        warnings = []
-        if self.production and self.jwt_secret == "dev-change-me":
-            warnings.append("JWT_SECRET is still set to the default dev value")
-        if self.production and self.app_password == "change-me":
-            warnings.append("APP_PASSWORD is still set to the default dev value")
-        if self.production and not self.cookie_secure:
-            warnings.append("COOKIE_SECURE should be True in production")
-        if warnings:
-            raise RuntimeError("Production configuration warnings:\n" + "\n".join(warnings))
 
 
 settings = Settings()

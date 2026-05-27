@@ -74,24 +74,12 @@ export type ExecutionArtifact = {
   path?: string;
 };
 
-export type Session = {
-  authenticated: boolean;
-  user?: { id: string; email: string };
-  team?: { id: string; name: string };
-  subscription?: { tier: string; status: string };
-  role?: string;
-};
-
 export type AdminHealth = {
   database?: Record<string, unknown>;
   redis_workers?: Record<string, unknown>;
   storage?: Record<string, unknown>;
   sandbox?: Record<string, unknown>;
   [key: string]: unknown;
-};
-
-export type CheckoutResponse = {
-  url: string;
 };
 
 export type AgentAudit = {
@@ -102,30 +90,29 @@ export type AgentAudit = {
   [key: string]: unknown;
 };
 
-let _csrfToken = "";
+let _getToken: (() => Promise<string | null>) | null = null;
 
-function getCookies(): Record<string, string> {
-  return Object.fromEntries(
-    document.cookie.split("; ").filter(Boolean).map((c) => {
-      const idx = c.indexOf("=");
-      return [c.slice(0, idx), c.slice(idx + 1)];
-    })
-  );
+export function setTokenProvider(provider: () => Promise<string | null>) {
+  _getToken = provider;
 }
 
-function getCsrfHeader(): Record<string, string> {
-  if (!_csrfToken) {
-    _csrfToken = getCookies()["csrf-token"] || "";
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {};
+  if (_getToken) {
+    try {
+      const token = await _getToken();
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    } catch {}
   }
-  return _csrfToken ? { "x-csrf-token": _csrfToken } : {};
+  return headers;
 }
 
 export async function api<T>(path: string): Promise<T> {
-  const response = await fetch(path, { credentials: "include" });
+  const headers = await getAuthHeaders();
+  const response = await fetch(path, { credentials: "include", headers });
   if (!response.ok) {
     throw new Error(await response.text());
   }
-  _csrfToken = getCookies()["csrf-token"] || _csrfToken;
   return response.json();
 }
 
@@ -137,23 +124,17 @@ export async function patchApi<T>(path: string, body: unknown): Promise<T> {
   return _fetchJson<T>("PATCH", path, body);
 }
 
-export async function putApi<T>(path: string, body: unknown): Promise<T> {
-  return _fetchJson<T>("PUT", path, body);
-}
-
 export async function deleteApi(path: string): Promise<void> {
-  const headers: Record<string, string> = {};
-  Object.assign(headers, getCsrfHeader());
+  const headers = await getAuthHeaders();
   const response = await fetch(path, { method: "DELETE", credentials: "include", headers });
   if (!response.ok) {
     throw new Error(await response.text());
   }
-  _csrfToken = getCookies()["csrf-token"] || _csrfToken;
 }
 
 async function _fetchJson<T>(method: string, path: string, body: unknown): Promise<T> {
   const headers: Record<string, string> = { "content-type": "application/json" };
-  Object.assign(headers, getCsrfHeader());
+  Object.assign(headers, await getAuthHeaders());
   const response = await fetch(path, {
     method,
     credentials: "include",
@@ -163,6 +144,5 @@ async function _fetchJson<T>(method: string, path: string, body: unknown): Promi
   if (!response.ok) {
     throw new Error(await response.text());
   }
-  _csrfToken = getCookies()["csrf-token"] || _csrfToken;
   return response.json();
 }

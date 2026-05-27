@@ -5,14 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import type { Project } from "../../../../lib/api";
 import { api } from "../../../../lib/api";
-import { useSession } from "../../../../components/AuthProvider";
+import { useAuth } from "@clerk/nextjs";
 import { Panel, EmptyState, StatusBadge, LoadingSpinner } from "../../../../components/ui";
 import SidebarLayout from "../../../../components/SidebarLayout";
 
 export default function PapersPage() {
   const params = useParams();
   const router = useRouter();
-  const { session } = useSession();
+  const { isLoaded, isSignedIn } = useAuth();
   const projectId = params.id as string;
   const { data: projects, mutate, isLoading } = useSWR<Project[]>("/api/v1/projects", api);
   const [uploading, setUploading] = useState(false);
@@ -46,7 +46,8 @@ export default function PapersPage() {
     setUploading(false);
   }
 
-  if (!session?.authenticated) { router.replace("/login"); return null; }
+  if (!isLoaded) return <SidebarLayout><LoadingSpinner text="Loading..." /></SidebarLayout>;
+  if (!isSignedIn) { router.replace("/sign-in"); return null; }
 
   if (isLoading) return <SidebarLayout><LoadingSpinner text="Loading papers..." /></SidebarLayout>;
 

@@ -2,20 +2,21 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "../components/AuthProvider";
+import { useAuth } from "@clerk/nextjs";
 import { LoadingSpinner } from "../components/ui";
 
 export default function Home() {
   const router = useRouter();
-  const { session } = useSession();
+  const { isLoaded, isSignedIn } = useAuth();
 
   useEffect(() => {
-    if (session?.authenticated) {
+    if (!isLoaded) return;
+    if (isSignedIn) {
       router.replace("/projects");
     } else {
-      router.replace("/login");
+      router.replace("/sign-in");
     }
-  }, [session, router]);
+  }, [isLoaded, isSignedIn, router]);
 
   return <LoadingSpinner text="Redirecting..." />;
 }

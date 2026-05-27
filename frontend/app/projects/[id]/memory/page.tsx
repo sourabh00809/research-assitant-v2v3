@@ -3,21 +3,22 @@
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import type { Project } from "../../../../lib/api";
+import { useAuth } from "@clerk/nextjs";
 import { api } from "../../../../lib/api";
-import { useSession } from "../../../../components/AuthProvider";
 import { Panel, EmptyState, StatusBadge, LoadingSpinner } from "../../../../components/ui";
 import SidebarLayout from "../../../../components/SidebarLayout";
 
 export default function MemoryPage() {
   const params = useParams();
   const router = useRouter();
-  const { session } = useSession();
+  const { isLoaded, isSignedIn } = useAuth();
   const projectId = params.id as string;
   const { data: projects, error, isLoading } = useSWR<Project[]>("/api/v1/projects", api);
   const project = projects?.find((p) => p.id === projectId);
   const memory = project?.memory ?? [];
 
-  if (!session?.authenticated) { router.replace("/login"); return null; }
+  if (!isLoaded) return <SidebarLayout><LoadingSpinner text="Loading research memory..." /></SidebarLayout>;
+  if (!isSignedIn) { router.replace("/sign-in"); return null; }
 
   if (isLoading) return <SidebarLayout><LoadingSpinner text="Loading research memory..." /></SidebarLayout>;
 

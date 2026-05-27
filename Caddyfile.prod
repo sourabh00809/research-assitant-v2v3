@@ -1,4 +1,4 @@
-:{$PORT:8080} {
+:7860 {
 	encode gzip zstd
 
 	reverse_proxy /api/* localhost:8000

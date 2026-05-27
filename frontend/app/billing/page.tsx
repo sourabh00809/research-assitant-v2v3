@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { api, postApi } from "../../lib/api";
-import { useSession } from "../../components/AuthProvider";
 import { Panel, LoadingSpinner } from "../../components/ui";
 import { PaymentModal } from "../../components/PaymentModal";
 import SidebarLayout from "../../components/SidebarLayout";
@@ -13,19 +13,22 @@ interface Plan { tier: string; name: string; desc: string; price: string }
 
 export default function BillingPage() {
   const router = useRouter();
-  const { session, refreshSession } = useSession();
+  const { user } = useUser();
+  const { isLoaded, isSignedIn } = useAuth();
   const { data: plans, isLoading } = useSWR<Plan[]>("/api/v1/billing/plans", api);
   const [selected, setSelected] = useState<Plan | null>(null);
   const [message, setMessage] = useState("");
+  const [currentTier, setCurrentTier] = useState("free");
 
-  if (!session?.authenticated) { router.replace("/login"); return null; }
+  if (!isLoaded) return <LoadingSpinner text="Loading..." />;
+  if (!isSignedIn) { router.replace("/sign-in"); return null; }
 
   async function handleUpgrade() {
-    if (!selected || !session?.team?.id) return;
+    if (!selected) return;
     try {
-      await postApi("/api/v1/billing/upgrade", { team_id: session.team.id, tier: selected.tier });
+      await postApi("/api/v1/billing/upgrade", { tier: selected.tier });
       setMessage(`Successfully upgraded to ${selected.name}!`);
-      await refreshSession();
+      setCurrentTier(selected.tier);
     } catch {
       setMessage("Upgrade failed. Please try again.");
     }
@@ -51,10 +54,10 @@ export default function BillingPage() {
                 <p className="text-sm text-slate-600">{plan.desc}</p>
                 <button
                   className="mt-4 w-full rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                  disabled={session?.subscription?.tier === plan.tier}
+                  disabled={currentTier === plan.tier}
                   onClick={() => setSelected(plan)}
                 >
-                  {session?.subscription?.tier === plan.tier ? "Current Plan" : `Subscribe ${plan.name}`}
+                  {currentTier === plan.tier ? "Current Plan" : `Subscribe ${plan.name}`}
                 </button>
               </Panel>
             ))}

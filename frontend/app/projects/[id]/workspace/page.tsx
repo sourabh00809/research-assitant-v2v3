@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import type { Project } from "../../../../lib/api";
+import { useAuth } from "@clerk/nextjs";
 import { api, postApi } from "../../../../lib/api";
-import { useSession } from "../../../../components/AuthProvider";
 import { Panel, EmptyState, LoadingSpinner, MetricCard } from "../../../../components/ui";
 import SidebarLayout from "../../../../components/SidebarLayout";
 
@@ -40,7 +40,7 @@ type BriefResult = {
 export default function WorkspacePage() {
   const params = useParams();
   const router = useRouter();
-  const { session } = useSession();
+  const { isLoaded, isSignedIn } = useAuth();
   const projectId = params.id as string;
   const { data: projects, mutate } = useSWR<Project[]>("/api/v1/projects", api);
   const [question, setQuestion] = useState("");
@@ -79,7 +79,8 @@ export default function WorkspacePage() {
     setBusy("");
   }
 
-  if (!session?.authenticated) { router.replace("/login"); return null; }
+  if (!isLoaded) return <LoadingSpinner text="Loading..." />;
+  if (!isSignedIn) { router.replace("/sign-in"); return null; }
 
   return (
     <SidebarLayout>

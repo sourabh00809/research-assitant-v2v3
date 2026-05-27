@@ -3,14 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { postApi } from "../../lib/api";
-import { useSession } from "../../components/AuthProvider";
-import { Panel } from "../../components/ui";
+import { useUser, useAuth } from "@clerk/nextjs";
+import { Panel, LoadingSpinner } from "../../components/ui";
 import SidebarLayout from "../../components/SidebarLayout";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { session, refreshSession: refresh } = useSession();
-  const [teamName, setTeamName] = useState(session?.team?.name ?? "");
+  const { user } = useUser();
+  const { isLoaded, isSignedIn } = useAuth();
+  const [teamName, setTeamName] = useState("Research Lab");
   const [saving, setSaving] = useState("");
   const [message, setMessage] = useState("");
 
@@ -21,7 +22,6 @@ export default function SettingsPage() {
     try {
       await postApi("/api/v1/settings/team", { name: teamName.trim() });
       setMessage("Team name updated.");
-      await refresh();
     } catch { setMessage("Failed to update team name."); }
     setSaving("");
   }
@@ -36,7 +36,8 @@ export default function SettingsPage() {
     setSaving("");
   }
 
-  if (!session?.authenticated) { router.replace("/login"); return null; }
+  if (!isLoaded) return <SidebarLayout><LoadingSpinner text="Loading..." /></SidebarLayout>;
+  if (!isSignedIn) { router.replace("/sign-in"); return null; }
 
   return (
     <SidebarLayout>
@@ -57,11 +58,11 @@ export default function SettingsPage() {
             <div className="grid gap-3 text-sm">
               <div>
                 <span className="text-xs font-semibold text-slate-400">Email</span>
-                <p className="text-slate-700">{session.user?.email ?? "—"}</p>
+                <p className="text-slate-700">{user?.primaryEmailAddress?.emailAddress ?? "—"}</p>
               </div>
               <div>
                 <span className="text-xs font-semibold text-slate-400">Role</span>
-                <p className="text-slate-700">{session.role ?? "viewer"}</p>
+                <p className="text-slate-700">admin</p>
               </div>
               <div>
                 <span className="text-xs font-semibold text-slate-400">Team</span>

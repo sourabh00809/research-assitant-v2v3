@@ -4,15 +4,15 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import type { Project } from "../../../../lib/api";
+import { useAuth } from "@clerk/nextjs";
 import { api, postApi } from "../../../../lib/api";
-import { useSession } from "../../../../components/AuthProvider";
 import { Panel, EmptyState, LoadingSpinner } from "../../../../components/ui";
 import SidebarLayout from "../../../../components/SidebarLayout";
 
 export default function ExperimentsPage() {
   const params = useParams();
   const router = useRouter();
-  const { session } = useSession();
+  const { isLoaded, isSignedIn } = useAuth();
   const projectId = params.id as string;
   const { data: projects, mutate, isLoading } = useSWR<Project[]>("/api/v1/projects", api);
   const [busy, setBusy] = useState("");
@@ -54,7 +54,8 @@ export default function ExperimentsPage() {
     setBusy("");
   }
 
-  if (!session?.authenticated) { router.replace("/login"); return null; }
+  if (!isLoaded) return <SidebarLayout><LoadingSpinner text="Loading experiment plans..." /></SidebarLayout>;
+  if (!isSignedIn) { router.replace("/sign-in"); return null; }
 
   if (isLoading) return <SidebarLayout><LoadingSpinner text="Loading experiment plans..." /></SidebarLayout>;
 

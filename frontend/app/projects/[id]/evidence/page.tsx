@@ -4,15 +4,15 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import type { Project } from "../../../../lib/api";
+import { useAuth } from "@clerk/nextjs";
 import { api } from "../../../../lib/api";
-import { useSession } from "../../../../components/AuthProvider";
 import { Panel, EmptyState, LoadingSpinner, StatusBadge } from "../../../../components/ui";
 import SidebarLayout from "../../../../components/SidebarLayout";
 
 export default function EvidencePage() {
   const params = useParams();
   const router = useRouter();
-  const { session } = useSession();
+  const { isLoaded, isSignedIn } = useAuth();
   const projectId = params.id as string;
   const { data: projects, isLoading } = useSWR<Project[]>("/api/v1/projects", api);
 
@@ -28,7 +28,8 @@ export default function EvidencePage() {
     return true;
   });
 
-  if (!session?.authenticated) { router.replace("/login"); return null; }
+  if (!isLoaded) return <SidebarLayout><LoadingSpinner text="Loading evidence..." /></SidebarLayout>;
+  if (!isSignedIn) { router.replace("/sign-in"); return null; }
 
   if (isLoading) return <SidebarLayout><LoadingSpinner text="Loading evidence..." /></SidebarLayout>;
 

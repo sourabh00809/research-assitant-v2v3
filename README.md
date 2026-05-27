@@ -1,3 +1,12 @@
+---
+title: Research Assistant
+emoji: 🔬
+colorFrom: emerald
+colorTo: green
+sdk: docker
+app_port: 7860
+---
+
 # AI Scientist Platform MVP
 
 A local, citation-grounded research workspace that turns a research question into an evidence-backed brief.

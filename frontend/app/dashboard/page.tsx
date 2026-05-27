@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import type { Project, AdminHealth } from "../../lib/api";
+import { useUser, useAuth } from "@clerk/nextjs";
 import { api, postApi } from "../../lib/api";
-import { useSession } from "../../components/AuthProvider";
 import { MetricCard, Panel, EmptyState, LoadingSpinner, ErrorBanner } from "../../components/ui";
 import SidebarLayout from "../../components/SidebarLayout";
 import HealthCard from "../../components/HealthCard";
@@ -14,7 +14,8 @@ const DEFAULT_QUERY = "retrieval augmented research agents";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { session, refreshSession } = useSession();
+  const { user } = useUser();
+  const { isLoaded, isSignedIn } = useAuth();
   const { data: projects, error: projectsError, mutate: refreshProjects, isLoading: projectsLoading } = useSWR<Project[]>(
     "/api/v1/projects", api
   );
@@ -66,14 +67,9 @@ export default function DashboardPage() {
     });
   }
 
-  async function logout() {
-    await postApi("/api/v1/auth/logout", {});
-    await refreshSession();
-    router.push("/login");
-  }
-
-  if (!session?.authenticated) {
-    router.replace("/login");
+  if (!isLoaded) return <LoadingSpinner text="Loading..." />;
+  if (!isSignedIn) {
+    router.replace("/sign-in");
     return null;
   }
 
@@ -84,7 +80,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold">Dashboard</h1>
             <p className="mt-1 text-sm text-slate-600">
-              {session.user?.email} on {session.team?.name ?? "Local"} as {session.role ?? "viewer"}
+              {user?.primaryEmailAddress?.emailAddress ?? "Researcher"}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -95,12 +91,12 @@ export default function DashboardPage() {
             >
               {busyAction === "question" ? "Running..." : "Run Question"}
             </button>
-            <button
+            <a
+              href="/sign-out"
               className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold"
-              onClick={logout}
             >
               Logout
-            </button>
+            </a>
             <a className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold" href="/legacy">
               Legacy UI
             </a>

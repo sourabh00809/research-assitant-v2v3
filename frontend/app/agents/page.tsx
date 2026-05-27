@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import type { Project, AgentAudit, AgentRun } from "../../lib/api";
 import { api, postApi } from "../../lib/api";
-import { useSession } from "../../components/AuthProvider";
+import { useAuth } from "@clerk/nextjs";
 import { Panel, EmptyState, LoadingSpinner } from "../../components/ui";
 import SidebarLayout from "../../components/SidebarLayout";
 import AgentRunCard from "../../components/AgentRunCard";
 
 export default function AgentsPage() {
   const router = useRouter();
-  const { session } = useSession();
+  const { isLoaded, isSignedIn } = useAuth();
   const { data: projects, mutate: refreshProjects, isLoading } = useSWR<Project[]>("/api/v1/projects", api);
   const [busyAction, setBusyAction] = useState("");
   const [message, setMessage] = useState("");
@@ -63,7 +63,8 @@ export default function AgentsPage() {
     });
   }
 
-  if (!session?.authenticated) { router.replace("/login"); return null; }
+  if (!isLoaded) return <SidebarLayout><LoadingSpinner text="Loading agents..." /></SidebarLayout>;
+  if (!isSignedIn) { router.replace("/sign-in"); return null; }
 
   if (isLoading) return <SidebarLayout><LoadingSpinner text="Loading agents..." /></SidebarLayout>;
 
