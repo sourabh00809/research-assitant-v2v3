@@ -39,7 +39,7 @@ COPY Caddyfile.prod /app/Caddyfile
 EXPOSE 7860
 
 CMD sh -c "\
-  cd /app/frontend && HOSTNAME=0.0.0.0 PORT=3000 node .next/standalone/server.js 2>/tmp/node.log & \
+  cd /app/frontend/.next/standalone && HOSTNAME=0.0.0.0 PORT=3000 node server.js 2>/tmp/node.log & \
   cd /app && python3 -m uvicorn ai_scientist.main:app --host 0.0.0.0 --port 8000 2>/tmp/python.log & \
   sleep 3 && echo '=== Node log ===' && cat /tmp/node.log && echo '=== Python log ===' && cat /tmp/python.log && \
   echo '=== Starting Caddy ===' && caddy run --config /app/Caddyfile"
