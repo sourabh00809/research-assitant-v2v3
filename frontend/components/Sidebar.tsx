@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { Session } from "../lib/api";
+import { useUser } from "@clerk/nextjs";
 
 function Svg({ children, className = "h-4 w-4" }: { children: React.ReactNode; className?: string }) {
   return <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>;
 }
 
-const ICONS = {
+const ICONS: Record<string, React.ReactNode> = {
   projects: <Svg><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" /></Svg>,
   agents: <Svg><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></Svg>,
   billing: <Svg><text x="12" y="16" textAnchor="middle" fontSize="14" fontWeight="bold" stroke="none" fill="currentColor">₹</text><circle cx="12" cy="12" r="10" /></Svg>,
@@ -42,12 +42,13 @@ function isActive(pathname: string, href: string): boolean {
   return pathname.startsWith(href);
 }
 
-export default function Sidebar({ session }: { session?: Session }) {
+export default function Sidebar() {
   const pathname = usePathname();
+  const { user, isSignedIn } = useUser();
   const projectMatch = pathname.match(/^\/projects\/([^/]+)/);
   const projectId = projectMatch?.[1];
 
-  if (!session?.authenticated) return null;
+  if (!isSignedIn) return null;
 
   return (
     <aside className="flex w-60 flex-col border-r border-slate-200 bg-white">
@@ -55,7 +56,7 @@ export default function Sidebar({ session }: { session?: Session }) {
         <Link href="/projects" className="text-xs font-bold uppercase tracking-wide text-emerald-700 hover:text-emerald-600">
           AI Scientist
         </Link>
-        <p className="mt-1 truncate text-xs text-slate-500">{session.user?.email ?? "Researcher"}</p>
+        <p className="mt-1 truncate text-xs text-slate-500">{user?.primaryEmailAddress?.emailAddress ?? "Researcher"}</p>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
@@ -101,7 +102,7 @@ export default function Sidebar({ session }: { session?: Session }) {
       <div className="border-t border-slate-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-            {session.role ?? "viewer"}
+            admin
           </span>
           <Link href="/projects" className="text-xs text-emerald-600 hover:text-emerald-700">
             Projects
