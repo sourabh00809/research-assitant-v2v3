@@ -1,8 +1,8 @@
 ---
 title: Research Assistant
 emoji: 🔬
-colorFrom: emerald
-colorTo: green
+colorFrom: green
+colorTo: blue
 sdk: docker
 app_port: 7860
 ---
