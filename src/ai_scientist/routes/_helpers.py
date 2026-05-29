@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import Request
 
-from ..models import ExperimentPlan, MemoryItem, ResearchBrief
+from ..models import ExperimentPlan, MemoryItem, ResearchBrief, utc_now
 from ._state import state
 
 
@@ -43,6 +43,7 @@ def build_memory_from_brief(brief: ResearchBrief | None) -> list[MemoryItem]:
             content=ev.claim[:512] if ev.claim else "",
             tags=[ev.extraction_type] if ev.extraction_type else [],
             source_ids=[ev.source_id] if ev.source_id else [],
+            created_at=utc_now(),
         ))
     return items
 

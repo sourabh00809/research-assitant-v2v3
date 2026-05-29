@@ -315,6 +315,7 @@ class MemoryItem(BaseModel):
         "rejected_direction",
         "note",
         "user_note",
+        "evidence",
     ]
     content: str
     source_ids: list[str] = Field(default_factory=list)
