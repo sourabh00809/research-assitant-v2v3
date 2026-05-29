@@ -116,7 +116,7 @@ export default function GraphPage() {
   return (
     <SidebarLayout>
       <div className="flex h-[calc(100vh-0px)]">
-        <div className="flex-1">
+        <div className="relative flex-1">
           <div className="absolute left-4 top-4 z-10">
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Research Graph</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">{project?.name ?? "Project"} · {nodes.length} nodes, {edges.length} connections</p>

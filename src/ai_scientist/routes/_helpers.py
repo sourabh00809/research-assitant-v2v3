@@ -11,24 +11,30 @@ from ._state import state
 
 
 def resolve_brief(project: Any, brief_id: str | None = None, question_id: str | None = None) -> ResearchBrief | None:
+    pid = project.id if hasattr(project, "id") else project["id"]
+    briefs = project.briefs if hasattr(project, "briefs") else project.get("briefs") or []
     if brief_id:
-        return state.store.get_brief(project["id"], brief_id)
+        return state.store.get_brief(pid, brief_id)
     if question_id:
-        for b in (project.get("briefs") or []):
-            if b.get("question_id") == question_id:
-                return state.store.get_brief(project["id"], b["id"])
-    briefs = project.get("briefs") or []
+        for b in (briefs or []):
+            qid = b.question_id if hasattr(b, "question_id") else b.get("question_id")
+            bid = b.id if hasattr(b, "id") else b["id"]
+            if qid == question_id:
+                return state.store.get_brief(pid, bid)
     if briefs:
-        return state.store.get_brief(project["id"], briefs[0]["id"])
+        bid = briefs[0].id if hasattr(briefs[0], "id") else briefs[0]["id"]
+        return state.store.get_brief(pid, bid)
     return None
 
 
 def resolve_experiment_plan(project: Any, plan_id: str | None = None) -> ExperimentPlan | None:
+    pid = project.id if hasattr(project, "id") else project["id"]
+    plans = project.experiment_plans if hasattr(project, "experiment_plans") else project.get("experiment_plans") or []
     if plan_id:
-        return state.store.get_experiment_plan(project["id"], plan_id)
-    plans = project.get("experiment_plans") or []
+        return state.store.get_experiment_plan(pid, plan_id)
     if plans:
-        return state.store.get_experiment_plan(project["id"], plans[0]["id"])
+        eid = plans[0].id if hasattr(plans[0], "id") else plans[0]["id"]
+        return state.store.get_experiment_plan(pid, eid)
     return None
 
 
