@@ -25,13 +25,13 @@ from ..models import (
 )
 from ..sandbox import run_sandbox
 from ._auth import require_project_access
-from ._state import STORE
+from ._state import state
 
 router = APIRouter(tags=["agents"])
 
 
 def set_agent_status(project_id: str, agent_id: str, status: str) -> ResearchProject:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     agent = next((item for item in project.autonomous_agents if item.id == agent_id), None)
@@ -42,12 +42,12 @@ def set_agent_status(project_id: str, agent_id: str, status: str) -> ResearchPro
         if run.agent_id == agent_id and run.status in {"queued", "running", "paused"}:
             run.status = "paused" if status == "paused" else "stopped" if status == "stopped" else "running"
             run.current_step = f"agent_{status}"
-    return STORE.save_project(project)
+    return state.store.save_project(project)
 
 
 @router.post("/api/v1/agents", response_model=ResearchProject)
 def create_agent(request: CreateAgentRequest, project_id: str = "") -> ResearchProject:
-    project = STORE.get_project(project_id) if project_id else None
+    project = state.store.get_project(project_id) if project_id else None
     if not project:
         raise HTTPException(status_code=404, detail="Project not found or no default project")
     agent = AgentDefinition(
@@ -63,7 +63,7 @@ def create_agent(request: CreateAgentRequest, project_id: str = "") -> ResearchP
     run = start_agent_run(project, agent)
     if request.type == "experiment_runner":
         request_experiment_approval(run, None)
-    return STORE.save_project(project)
+    return state.store.save_project(project)
 
 
 @router.post("/api/v1/projects/{project_id}/agents", response_model=ResearchProject)
@@ -75,17 +75,17 @@ def create_project_agent(project_id: str, request: CreateAgentRequest, http_requ
 @router.post("/api/v1/saved-searches", response_model=ResearchProject)
 def create_saved_search(request: CreateSavedSearchRequest, http_request: Request) -> ResearchProject:
     require_project_access(http_request, request.project_id, "member")
-    project = STORE.get_project(request.project_id)
+    project = state.store.get_project(request.project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     create_saved_search_record(project, request.query, request.cadence)
-    return STORE.save_project(project)
+    return state.store.save_project(project)
 
 
 @router.post("/api/v1/agent-runs/{run_id}/step", response_model=ResearchProject)
 def run_agent_step(run_id: str, request: RunAgentStepRequest, http_request: Request, project_id: str = "") -> ResearchProject:
     require_project_access(http_request, project_id, "member")
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     run = next((item for item in project.autonomous_agent_runs if item.id == run_id), None)
@@ -110,13 +110,13 @@ def run_agent_step(run_id: str, request: RunAgentStepRequest, http_request: Requ
         run.current_step = "workflow_recorded"
         run.completed_at = utc_now()
         run.steps.append({"name": agent.type, "status": "completed", "created_at": utc_now()})
-    return STORE.save_project(project)
+    return state.store.save_project(project)
 
 
 @router.post("/api/v1/agent-runs/{run_id}/sandbox", response_model=ResearchProject)
 def run_agent_sandbox(run_id: str, request: SandboxRunRequest, http_request: Request, project_id: str = "") -> ResearchProject:
     require_project_access(http_request, project_id, "member")
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     run = next((item for item in project.autonomous_agent_runs if item.id == run_id), None)
@@ -131,7 +131,7 @@ def run_agent_sandbox(run_id: str, request: SandboxRunRequest, http_request: Req
     run.status = "completed" if result["exit_code"] == 0 else "failed"
     run.current_step = "sandbox_completed"
     run.completed_at = utc_now()
-    return STORE.save_project(project)
+    return state.store.save_project(project)
 
 
 @router.post("/api/v1/agents/{agent_id}/pause", response_model=ResearchProject)
@@ -152,7 +152,7 @@ def stop_agent(agent_id: str, project_id: str = "") -> ResearchProject:
 @router.post("/api/v1/agent-runs/{run_id}/approve", response_model=ResearchProject)
 def approve_agent_run(run_id: str, http_request: Request, project_id: str = "") -> ResearchProject:
     require_project_access(http_request, project_id, "member")
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     run = next((item for item in project.autonomous_agent_runs if item.id == run_id), None)
@@ -172,13 +172,13 @@ def approve_agent_run(run_id: str, http_request: Request, project_id: str = "") 
             created_at=utc_now(),
         )
     )
-    return STORE.save_project(project)
+    return state.store.save_project(project)
 
 
 @router.get("/api/v1/agent-runs/{run_id}/status")
 def agent_run_status(run_id: str, request: Request, project_id: str = "") -> dict:
     require_project_access(request, project_id, "viewer")
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     run = next((item for item in project.autonomous_agent_runs if item.id == run_id), None)
@@ -190,7 +190,7 @@ def agent_run_status(run_id: str, request: Request, project_id: str = "") -> dic
 @router.get("/api/v1/agent-runs/{run_id}/audit")
 def agent_run_audit(run_id: str, request: Request, project_id: str = "") -> dict:
     require_project_access(request, project_id, "viewer")
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     run = next((item for item in project.autonomous_agent_runs if item.id == run_id), None)

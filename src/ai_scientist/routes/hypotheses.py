@@ -12,14 +12,14 @@ from ..models import (
     utc_now,
 )
 from ._helpers import resolve_brief, resolve_experiment_plan
-from ._state import STORE
+from ._state import state
 
 router = APIRouter(tags=["hypotheses"])
 
 
 @router.post("/api/projects/{project_id}/hypotheses", response_model=ResearchProject)
 def create_hypotheses(project_id: str, request: GenerateHypothesesRequest) -> ResearchProject:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -45,12 +45,12 @@ def create_hypotheses(project_id: str, request: GenerateHypothesesRequest) -> Re
             completed_at=utc_now(),
         ),
     )
-    return STORE.save_project(project)
+    return state.store.save_project(project)
 
 
 @router.get("/api/projects/{project_id}/hypotheses", response_model=list[HypothesisCandidate])
 def list_hypotheses(project_id: str) -> list[HypothesisCandidate]:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return project.hypotheses

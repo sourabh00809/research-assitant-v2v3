@@ -6,7 +6,7 @@ from fastapi import HTTPException, Request
 
 from ..config import settings
 from ..rbac import require_role
-from ._state import CLERK_VERIFIER
+from ._state import state
 
 _API_PROJECT_PATH = re.compile(r"^/api/(v\d/)?projects/(?P<project_id>[^/]+)(?:/|$)")
 
@@ -16,8 +16,8 @@ def current_clerk_user(request: Request):
     if not auth_header.startswith("Bearer "):
         return None
     token = auth_header.removeprefix("Bearer ")
-    if CLERK_VERIFIER:
-        return CLERK_VERIFIER.verify(token)
+    if state.clerk_verifier:
+        return state.clerk_verifier.verify(token)
     return None
 
 

@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
-from ._state import BASE_DIR
+from ._state import state
 
 router = APIRouter(tags=["frontend"])
 
@@ -14,7 +14,7 @@ STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 @router.get("/")
 def index() -> HTMLResponse:
-    frontend_dir = BASE_DIR / "frontend" / "out"
+    frontend_dir = state.base_dir / "frontend" / "out"
     if frontend_dir.exists():
         index_path = frontend_dir / "index.html"
         if index_path.exists():
@@ -29,7 +29,7 @@ def legacy_index() -> FileResponse:
 
 @router.get("/app")
 def next_app_placeholder() -> HTMLResponse:
-    frontend_dir = BASE_DIR / "frontend" / "out"
+    frontend_dir = state.base_dir / "frontend" / "out"
     if frontend_dir.exists():
         return RedirectResponse("/", status_code=302)
     return HTMLResponse(v2_v3_workspace_html())

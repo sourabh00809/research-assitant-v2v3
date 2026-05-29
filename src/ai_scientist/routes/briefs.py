@@ -13,14 +13,14 @@ from ..models import (
     utc_now,
 )
 from ._helpers import escape_xml
-from ._state import STORE
+from ._state import state
 
 router = APIRouter(tags=["briefs"])
 
 
 @router.get("/api/projects/{project_id}/briefs/{brief_id}")
 def get_brief(project_id: str, brief_id: str):
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     brief = next((item for item in project.briefs if item.id == brief_id), None)
@@ -31,7 +31,7 @@ def get_brief(project_id: str, brief_id: str):
 
 @router.get("/api/projects/{project_id}/briefs/{brief_id}/quality", response_model=EvidenceQualityReport)
 def get_brief_quality(project_id: str, brief_id: str) -> EvidenceQualityReport:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     brief = next((item for item in project.briefs if item.id == brief_id), None)
@@ -40,7 +40,7 @@ def get_brief_quality(project_id: str, brief_id: str) -> EvidenceQualityReport:
     if brief.quality_report:
         return brief.quality_report
     if brief.quality_report_id:
-        report = STORE.get_quality_report(project_id, brief.quality_report_id)
+        report = state.store.get_quality_report(project_id, brief.quality_report_id)
         if report:
             return report
     report = next((item for item in project.quality_reports if item.brief_id == brief_id), None)
@@ -51,7 +51,7 @@ def get_brief_quality(project_id: str, brief_id: str) -> EvidenceQualityReport:
 
 @router.get("/api/projects/{project_id}/briefs/{brief_id}/export.md", response_class=PlainTextResponse)
 def export_brief(project_id: str, brief_id: str) -> PlainTextResponse:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     brief = next((item for item in project.briefs if item.id == brief_id), None)
@@ -88,27 +88,27 @@ def export_brief_tex(project_id: str, brief_id: str) -> PlainTextResponse:
 
 @router.delete("/api/projects/{project_id}/briefs/{brief_id}")
 def delete_brief(project_id: str, brief_id: str) -> dict:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     project.briefs = [b for b in project.briefs if b.id != brief_id]
-    STORE.save_project(project)
+    state.store.save_project(project)
     return {"status": "deleted", "brief_id": brief_id}
 
 
 @router.delete("/api/projects/{project_id}/questions/{question_id}")
 def delete_question(project_id: str, question_id: str) -> dict:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     project.questions = [q for q in project.questions if q.id != question_id]
-    STORE.save_project(project)
+    state.store.save_project(project)
     return {"status": "deleted", "question_id": question_id}
 
 
 @router.get("/api/projects/{project_id}/runs/{run_id}/events")
 def run_events(project_id: str, run_id: str) -> StreamingResponse:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     run = next((item for item in project.agent_runs if item.id == run_id), None)
@@ -125,7 +125,7 @@ def run_events(project_id: str, run_id: str) -> StreamingResponse:
 
 @router.patch("/api/projects/{project_id}/evidence/{evidence_id}/feedback", response_model=ResearchProject)
 def evidence_feedback(project_id: str, evidence_id: str, request: EvidenceFeedbackRequest) -> ResearchProject:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     project.annotations.insert(
@@ -138,4 +138,4 @@ def evidence_feedback(project_id: str, evidence_id: str, request: EvidenceFeedba
             created_at=utc_now(),
         ),
     )
-    return STORE.save_project(project)
+    return state.store.save_project(project)

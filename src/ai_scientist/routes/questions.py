@@ -18,7 +18,7 @@ from ..models import (
     utc_now,
 )
 from ._helpers import build_memory_from_brief
-from ._state import ORCHESTRATOR, STORE
+from ._state import state
 
 logger = logging.getLogger("ai_scientist")
 
@@ -27,12 +27,12 @@ router = APIRouter(tags=["questions"])
 
 @router.post("/api/projects/{project_id}/questions/run", response_model=RunQuestionResponse)
 def run_research_question(project_id: str, request: RunQuestionRequest) -> RunQuestionResponse:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     question = ResearchQuestion(id=new_id("question"), text=request.question, created_at=utc_now())
-    chunks = STORE.list_document_chunks(project_id, limit=settings.max_chunks)
+    chunks = state.store.list_document_chunks(project_id, limit=settings.max_chunks)
     extra_sources = chunks_to_paper_sources(chunks, max_chunks=settings.max_chunks)
     logger.info(
         "agent_run_started project_id=%s question_id=%s provider=%s extra_pdf_chunks=%s",
@@ -52,7 +52,7 @@ def run_research_question(project_id: str, request: RunQuestionRequest) -> RunQu
             sources=request.sources,
         )
     else:
-        run, brief = ORCHESTRATOR.run(
+        run, brief = state.orchestrator.run(
             question,
             max_papers=request.max_papers,
             memory=project.memory if request.use_memory else [],
@@ -67,8 +67,8 @@ def run_research_question(project_id: str, request: RunQuestionRequest) -> RunQu
     project.briefs.insert(0, brief)
     project.memory = build_memory_from_brief(brief) + project.memory
     project.agent_runs = [run] + [item for item in project.agent_runs if item.id != run.id]
-    STORE.save_project(project)
-    STORE.save_agent_run(project_id, run)
+    state.store.save_project(project)
+    state.store.save_agent_run(project_id, run)
     if run.warnings:
         logger.warning("provider_fallback project_id=%s run_id=%s warnings=%s", project_id, run.id, " | ".join(run.warnings))
     logger.info("agent_run_completed project_id=%s question_id=%s run_id=%s provider=%s", project_id, question.id, run.id, run.provider)
@@ -77,7 +77,7 @@ def run_research_question(project_id: str, request: RunQuestionRequest) -> RunQu
 
 @router.post("/api/v1/projects/{project_id}/run")
 def v1_run_question(project_id: str, request: RunQuestionRequest) -> dict:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -104,14 +104,14 @@ def v1_run_question(project_id: str, request: RunQuestionRequest) -> dict:
         result = jobs_module.execute_job(job.model_dump(mode="json"), job_payload)
         job.status = "completed" if result.get("status") == "completed" else "failed"
         job.result = result
-        STORE.save_job(job)
+        state.store.save_job(job)
         return {
             "job_id": job.id,
             "status": job.status,
             "result": result,
         }
 
-    STORE.save_job(job)
+    state.store.save_job(job)
     return {
         "job_id": job.id,
         "status": "queued",
@@ -121,4 +121,4 @@ def v1_run_question(project_id: str, request: RunQuestionRequest) -> dict:
 
 @router.get("/api/projects/{project_id}/jobs")
 def list_project_jobs(project_id: str) -> list[dict]:
-    return [j.model_dump(mode="json") for j in STORE.list_jobs(project_id)]
+    return [j.model_dump(mode="json") for j in state.store.list_jobs(project_id)]

@@ -6,14 +6,14 @@ from fastapi.responses import PlainTextResponse
 from ..graph import build_research_graph
 from ..models import ResearchGraph
 from ._helpers import escape_xml
-from ._state import STORE
+from ._state import state
 
 router = APIRouter(tags=["graph"])
 
 
 @router.get("/api/projects/{project_id}/graph", response_model=ResearchGraph)
 def get_graph(project_id: str) -> ResearchGraph:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return build_research_graph(project)

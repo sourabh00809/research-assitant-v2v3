@@ -7,7 +7,7 @@ from ..config import settings
 from ..jobs import job_health
 from ..object_storage import storage_health
 from ..platform_db import ALEMBIC_BOOTSTRAP_SQL, database_health
-from ._state import ORCHESTRATOR
+from ._state import state
 
 router = APIRouter(tags=["admin"])
 
@@ -41,6 +41,6 @@ def admin_health() -> dict:
         "redis_workers": job_health(),
         "storage": storage_health(),
         "sandbox": {"backend": settings.sandbox_backend, "image": settings.sandbox_image},
-        "connectors": [item.model_dump(mode="json") for item in ORCHESTRATOR.search_service.connector_status()],
+        "connectors": [item.model_dump(mode="json") for item in state.orchestrator.search_service.connector_status()],
         "billing": {"tier": "free", "status": "dev_mode"},
     }

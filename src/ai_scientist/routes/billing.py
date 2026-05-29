@@ -6,7 +6,7 @@ from ..billing import list_plans
 from ..models import BillingCheckoutRequest, BootstrapTenantRequest, RecordUsageRequest, UsageEvent, new_id, utc_now
 from ..rate_limit import check_rate_limit
 from ..saas import create_single_user_tenant, create_team_membership, usage_summary
-from ._state import STORE
+from ._state import state
 
 router = APIRouter(tags=["billing"])
 
@@ -19,7 +19,7 @@ def bootstrap_tenant(request: BootstrapTenantRequest) -> dict:
         tier=request.tier,
     )
     membership = create_team_membership(user, team)
-    STORE.save_tenant_bundle(user, team, membership, subscription)
+    state.store.save_tenant_bundle(user, team, membership, subscription)
     return {
         "user": user.model_dump(mode="json"),
         "team": team.model_dump(mode="json"),
@@ -30,7 +30,7 @@ def bootstrap_tenant(request: BootstrapTenantRequest) -> dict:
 
 @router.post("/api/v1/usage")
 def record_usage(body: RecordUsageRequest, request: Request) -> dict:
-    event = STORE.record_usage_event(
+    event = state.store.record_usage_event(
         UsageEvent(
             id=new_id("usage"),
             subject_id=body.subject_id,
@@ -45,8 +45,8 @@ def record_usage(body: RecordUsageRequest, request: Request) -> dict:
 
 @router.get("/api/v1/usage/limits")
 def get_usage_limits(subject_id: str, team_id: str | None = None) -> dict:
-    events = STORE.list_usage_events(subject_id)
-    subscriptions = STORE.list_subscriptions(team_id)
+    events = state.store.list_usage_events(subject_id)
+    subscriptions = state.store.list_subscriptions(team_id)
     subscription = subscriptions[0] if subscriptions else None
     if not subscription:
         _, team, subscription = create_single_user_tenant(team_name="Local Workspace")

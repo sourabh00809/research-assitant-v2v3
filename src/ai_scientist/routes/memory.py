@@ -14,14 +14,14 @@ from ..models import (
     new_id,
     utc_now,
 )
-from ._state import STORE
+from ._state import state
 
 router = APIRouter(tags=["memory"])
 
 
 @router.post("/api/projects/{project_id}/memory", response_model=ResearchProject)
 def add_memory(project_id: str, request: AddMemoryRequest) -> ResearchProject:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -36,12 +36,12 @@ def add_memory(project_id: str, request: AddMemoryRequest) -> ResearchProject:
             created_at=utc_now(),
         ),
     )
-    return STORE.save_project(project)
+    return state.store.save_project(project)
 
 
 @router.post("/api/projects/{project_id}/memory/promote", response_model=ResearchProject)
 def promote_memory(project_id: str, request: PromoteMemoryRequest) -> ResearchProject:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     normalized_content = request.content.strip().lower()
@@ -68,12 +68,12 @@ def promote_memory(project_id: str, request: PromoteMemoryRequest) -> ResearchPr
                 created_at=utc_now(),
             ),
         )
-    return STORE.save_project(project)
+    return state.store.save_project(project)
 
 
 @router.get("/api/projects/{project_id}/memory", response_model=list[MemoryItem])
 def list_memory(project_id: str, kind: str | None = None, q: str | None = None, skip: int = 0, limit: int = 50) -> list[MemoryItem]:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     items = project.memory
@@ -91,17 +91,17 @@ def list_memory(project_id: str, kind: str | None = None, q: str | None = None, 
 
 @router.delete("/api/projects/{project_id}/memory/{memory_id}")
 def delete_memory(project_id: str, memory_id: str) -> dict:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     project.memory = [item for item in project.memory if item.id != memory_id]
-    STORE.save_project(project)
+    state.store.save_project(project)
     return {"status": "deleted", "memory_id": memory_id}
 
 
 @router.post("/api/projects/{project_id}/collections", response_model=ResearchProject)
 def create_collection(project_id: str, request: CreateCollectionRequest) -> ResearchProject:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     project.source_collections.insert(
@@ -114,12 +114,12 @@ def create_collection(project_id: str, request: CreateCollectionRequest) -> Rese
             created_at=utc_now(),
         ),
     )
-    return STORE.save_project(project)
+    return state.store.save_project(project)
 
 
 @router.post("/api/projects/{project_id}/annotations", response_model=ResearchProject)
 def add_annotation(project_id: str, request: AddAnnotationRequest) -> ResearchProject:
-    project = STORE.get_project(project_id)
+    project = state.store.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     project.annotations.insert(
@@ -132,4 +132,4 @@ def add_annotation(project_id: str, request: AddAnnotationRequest) -> ResearchPr
             created_at=utc_now(),
         ),
     )
-    return STORE.save_project(project)
+    return state.store.save_project(project)

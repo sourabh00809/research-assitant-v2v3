@@ -7,28 +7,28 @@ from typing import Any
 from fastapi import Request
 
 from ..models import ExperimentPlan, MemoryItem, ResearchBrief
-from ._state import STORE
+from ._state import state
 
 
 def resolve_brief(project: Any, brief_id: str | None = None, question_id: str | None = None) -> ResearchBrief | None:
     if brief_id:
-        return STORE.get_brief(project["id"], brief_id)
+        return state.store.get_brief(project["id"], brief_id)
     if question_id:
         for b in (project.get("briefs") or []):
             if b.get("question_id") == question_id:
-                return STORE.get_brief(project["id"], b["id"])
+                return state.store.get_brief(project["id"], b["id"])
     briefs = project.get("briefs") or []
     if briefs:
-        return STORE.get_brief(project["id"], briefs[0]["id"])
+        return state.store.get_brief(project["id"], briefs[0]["id"])
     return None
 
 
 def resolve_experiment_plan(project: Any, plan_id: str | None = None) -> ExperimentPlan | None:
     if plan_id:
-        return STORE.get_experiment_plan(project["id"], plan_id)
+        return state.store.get_experiment_plan(project["id"], plan_id)
     plans = project.get("experiment_plans") or []
     if plans:
-        return STORE.get_experiment_plan(project["id"], plans[0]["id"])
+        return state.store.get_experiment_plan(project["id"], plans[0]["id"])
     return None
 
 
