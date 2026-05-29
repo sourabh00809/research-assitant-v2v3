@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useTheme } from "./ThemeProvider";
 
 function Svg({ children, className = "h-4 w-4" }: { children: React.ReactNode; className?: string }) {
   return <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>;
@@ -20,6 +21,26 @@ const ICONS: Record<string, React.ReactNode> = {
   memory: <Svg><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></Svg>,
   "source-library": <Svg><path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" /><line x1="8" y1="7" x2="16" y2="7" /><line x1="8" y1="11" x2="14" y2="11" /></Svg>,
 };
+
+const SunIcon = (
+  <Svg className="h-4 w-4">
+    <circle cx="12" cy="12" r="5" />
+    <line x1="12" y1="1" x2="12" y2="3" />
+    <line x1="12" y1="21" x2="12" y2="23" />
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+    <line x1="1" y1="12" x2="3" y2="12" />
+    <line x1="21" y1="12" x2="23" y2="12" />
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+  </Svg>
+);
+
+const MoonIcon = (
+  <Svg className="h-4 w-4">
+    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+  </Svg>
+);
 
 const GLOBAL_LINKS = [
   { href: "/projects", label: "Projects", icon: "projects" },
@@ -45,18 +66,30 @@ function isActive(pathname: string, href: string): boolean {
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, isSignedIn } = useUser();
+  const { theme, toggleTheme } = useTheme();
   const projectMatch = pathname.match(/^\/projects\/([^/]+)/);
   const projectId = projectMatch?.[1];
 
   if (!isSignedIn) return null;
 
   return (
-    <aside className="flex w-60 flex-col border-r border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-4 py-4">
-        <Link href="/projects" className="text-xs font-bold uppercase tracking-wide text-emerald-700 hover:text-emerald-600">
-          Research Assistant
-        </Link>
-        <p className="mt-1 truncate text-xs text-slate-500">{user?.primaryEmailAddress?.emailAddress ?? "Researcher"}</p>
+    <aside className="flex w-60 flex-col border-r border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/95">
+      <div className="border-b border-slate-200 px-4 py-4 dark:border-slate-700/50">
+        <div className="flex items-center justify-between">
+          <div className="min-w-0 flex-1">
+            <Link href="/projects" className="text-xs font-bold uppercase tracking-wide text-emerald-700 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300">
+              Research Assistant
+            </Link>
+            <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{user?.primaryEmailAddress?.emailAddress ?? "Researcher"}</p>
+          </div>
+          <button
+            onClick={toggleTheme}
+            className="ml-2 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+          >
+            {theme === "light" ? MoonIcon : SunIcon}
+          </button>
+        </div>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
@@ -66,8 +99,8 @@ export default function Sidebar() {
             href={link.href}
             className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
               isActive(pathname, link.href)
-                ? "bg-emerald-100 text-emerald-900"
-                : "text-slate-600 hover:bg-slate-100"
+                ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-300"
+                : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/50"
             }`}
           >
             {ICONS[link.icon]}
@@ -77,8 +110,8 @@ export default function Sidebar() {
 
         {projectId && (
           <>
-            <hr className="my-3 border-slate-200" />
-            <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <hr className="my-3 border-slate-200 dark:border-slate-700/50" />
+            <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
               Project
             </p>
             {PROJECT_LINKS.map((link) => (
@@ -87,8 +120,8 @@ export default function Sidebar() {
                 href={`/projects/${projectId}/${link.href}`}
                 className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                   pathname === `/projects/${projectId}/${link.href}` || pathname.startsWith(`/projects/${projectId}/${link.href}/`)
-                    ? "bg-emerald-100 text-emerald-900"
-                    : "text-slate-600 hover:bg-slate-100"
+                    ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-300"
+                    : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/50"
                 }`}
               >
                 {ICONS[link.icon]}
@@ -99,12 +132,12 @@ export default function Sidebar() {
         )}
       </nav>
 
-      <div className="border-t border-slate-200 px-4 py-3">
+      <div className="border-t border-slate-200 px-4 py-3 dark:border-slate-700/50">
         <div className="flex items-center justify-between">
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
             {user?.primaryEmailAddress?.emailAddress === "sourabhnokhwal7@gmail.com" ? "admin" : "user"}
           </span>
-          <Link href="/projects" className="text-xs text-emerald-600 hover:text-emerald-700">
+          <Link href="/projects" className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
             Projects
           </Link>
         </div>

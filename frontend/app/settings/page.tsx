@@ -100,15 +100,15 @@ export default function SettingsPage() {
     <SidebarLayout>
       <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
         <header className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
-          <p className="mt-1 text-sm text-slate-500">Manage your account and preferences</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Settings</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage your account and preferences</p>
         </header>
 
         {message && (
           <div className={`mb-4 rounded-md border p-3 text-sm font-semibold ${
             messageType === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-red-200 bg-red-50 text-red-800"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
+              : "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
           }`}>
             {message}
           </div>
@@ -118,20 +118,20 @@ export default function SettingsPage() {
           <Panel title="Profile">
             <div className="grid gap-3 text-sm">
               <div>
-                <span className="text-xs font-semibold text-slate-400">Email</span>
-                <p className="text-slate-700">{user?.primaryEmailAddress?.emailAddress ?? "—"}</p>
+                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">Email</span>
+                <p className="text-slate-700 dark:text-slate-200">{user?.primaryEmailAddress?.emailAddress ?? "—"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-slate-400">Role</span>
-                <p className="text-slate-700">{role}</p>
+                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">Role</span>
+                <p className="text-slate-700 dark:text-slate-200">{role}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-slate-400">Team</span>
+                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">Team</span>
                 <div className="mt-1 flex gap-2">
                   <input value={teamName} onChange={(e) => setTeamName(e.target.value)}
-                    className="flex-1 rounded-md border border-slate-300 p-2 text-sm" />
+                    className="flex-1 rounded-md border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100" />
                   <button disabled={saving === "team"} onClick={saveTeamName}
-                    className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                    className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500">
                     {saving === "team" ? "Saving..." : "Save"}
                   </button>
                 </div>
@@ -140,27 +140,27 @@ export default function SettingsPage() {
           </Panel>
 
           <Panel title="Change Password">
-            <p className="mb-3 text-sm text-slate-500">Update your account password.</p>
+            <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">Update your account password.</p>
             <div className="grid gap-3">
               <input type="password" placeholder="Current password" value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="rounded-md border border-slate-300 p-2 text-sm" />
+                className="rounded-md border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100" />
               <input type="password" placeholder="New password (min 8 chars)" value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="rounded-md border border-slate-300 p-2 text-sm" />
+                className="rounded-md border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100" />
               <button disabled={changingPassword} onClick={handlePasswordChange}
-                className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500">
                 {changingPassword ? "Changing..." : "Change Password"}
               </button>
             </div>
           </Panel>
 
           <Panel title="Email Notifications">
-            <p className="mb-3 text-sm text-slate-500">Choose which notifications you&apos;d like to receive via email.</p>
+            <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">Choose which notifications you&apos;d like to receive via email.</p>
             <div className="flex flex-wrap gap-2">
               {["all", "approvals", "none"].map((pref) => (
                 <button key={pref} disabled={saving === pref} onClick={() => saveNotifications(pref)}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700/50">
                   {saving === pref ? "Saving..." : pref.charAt(0).toUpperCase() + pref.slice(1)}
                 </button>
               ))}
@@ -168,17 +168,17 @@ export default function SettingsPage() {
           </Panel>
 
           <Panel title="API Keys">
-            <p className="text-sm text-slate-500">Manage API keys for programmatic access. Coming soon.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Manage API keys for programmatic access. Coming soon.</p>
           </Panel>
 
           <Panel title="Delete Account">
-            <p className="mb-3 text-sm text-red-600">This action is permanent and cannot be undone.</p>
+            <p className="mb-3 text-sm text-red-600 dark:text-red-400">This action is permanent and cannot be undone.</p>
             <div className="grid gap-3">
               <input type="text" placeholder='Type "DELETE" to confirm' value={deleteConfirm}
                 onChange={(e) => setDeleteConfirm(e.target.value)}
-                className="rounded-md border border-red-300 p-2 text-sm" />
+                className="rounded-md border border-red-300 p-2 text-sm dark:border-red-800 dark:bg-slate-800 dark:text-slate-100" />
               <button disabled={deleting || deleteConfirm !== "DELETE"} onClick={handleDeleteAccount}
-                className="rounded-md bg-red-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                className="rounded-md bg-red-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-red-600">
                 {deleting ? "Deleting..." : "Delete Account"}
               </button>
             </div>

@@ -118,8 +118,8 @@ export default function GraphPage() {
       <div className="flex h-[calc(100vh-0px)]">
         <div className="flex-1">
           <div className="absolute left-4 top-4 z-10">
-            <h1 className="text-xl font-bold text-slate-900">Research Graph</h1>
-            <p className="text-xs text-slate-500">{project?.name ?? "Project"} · {nodes.length} nodes, {edges.length} connections</p>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Research Graph</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{project?.name ?? "Project"} · {nodes.length} nodes, {edges.length} connections</p>
           </div>
           {nodes.length > 0 ? (
             <ReactFlow
@@ -141,29 +141,29 @@ export default function GraphPage() {
             </ReactFlow>
           ) : (
             <div className="flex h-full items-center justify-center">
-              <p className="text-sm text-slate-400">Run investigations to populate the research graph.</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500">Run investigations to populate the research graph.</p>
             </div>
           )}
         </div>
 
         {selectedNode && (
-          <aside className="w-80 border-l border-slate-200 bg-white p-4 overflow-y-auto">
+          <aside className="w-80 border-l border-slate-200 bg-white p-4 overflow-y-auto dark:border-slate-600 dark:bg-slate-800/95">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-bold text-slate-900">Node Detail</h2>
-              <button onClick={() => setSelectedNode(null)} className="text-xs text-slate-400 hover:text-slate-600">Close</button>
+              <h2 className="font-bold text-slate-900 dark:text-slate-100">Node Detail</h2>
+              <button onClick={() => setSelectedNode(null)} className="text-xs text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300">Close</button>
             </div>
             <div className="grid gap-3 text-sm">
               <div>
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">ID</span>
-                <p className="text-slate-700">{selectedNode.id}</p>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">ID</span>
+                <p className="text-slate-700 dark:text-slate-200">{selectedNode.id}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Kind</span>
-                <p className="text-slate-700">{(selectedNode.data as Record<string, string>)?.kind || "unknown"}</p>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Kind</span>
+                <p className="text-slate-700 dark:text-slate-200">{(selectedNode.data as Record<string, string>)?.kind || "unknown"}</p>
               </div>
               <div>
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Label</span>
-                <p className="text-slate-700">{(selectedNode.data as Record<string, string>)?.label || "—"}</p>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Label</span>
+                <p className="text-slate-700 dark:text-slate-200">{(selectedNode.data as Record<string, string>)?.label || "—"}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <span

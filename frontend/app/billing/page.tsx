@@ -38,11 +38,11 @@ export default function BillingPage() {
   return (
     <SidebarLayout>
       <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold">Billing & Usage</h1>
-        <p className="mt-1 text-sm text-slate-600">Choose your subscription tier.</p>
+        <h1 className="text-3xl font-bold dark:text-slate-100">Billing & Usage</h1>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Choose your subscription tier.</p>
 
         {message && (
-          <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">
+          <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
             {message}
           </div>
         )}
@@ -51,7 +51,7 @@ export default function BillingPage() {
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {plans?.map((plan) => (
               <Panel key={plan.tier} title={plan.name} meta={plan.price}>
-                <p className="text-sm text-slate-600">{plan.desc}</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300">{plan.desc}</p>
                 <button
                   className="mt-4 w-full rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                   disabled={currentTier === plan.tier}

@@ -76,10 +76,10 @@ export default function DashboardPage() {
   return (
     <SidebarLayout>
       <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-300 pb-5">
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-300 pb-5 dark:border-slate-600">
           <div>
             <h1 className="text-3xl font-bold">Dashboard</h1>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
               {user?.primaryEmailAddress?.emailAddress ?? "Researcher"}
             </p>
           </div>
@@ -93,11 +93,11 @@ export default function DashboardPage() {
             </button>
             <a
               href="/sign-out"
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold"
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
             >
               Logout
             </a>
-            <a className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold" href="/legacy">
+            <a className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100" href="/legacy">
               Legacy UI
             </a>
           </div>
@@ -105,7 +105,7 @@ export default function DashboardPage() {
 
         {(errorMessage || message) && (
           <div className={`mt-4 rounded-md border p-3 text-sm font-semibold ${
-            errorMessage ? "border-red-200 bg-red-50 text-red-800" : "border-emerald-200 bg-emerald-50 text-emerald-800"
+            errorMessage ? "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300" : "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
           }`}>
             {errorMessage || message}
           </div>
@@ -128,13 +128,13 @@ export default function DashboardPage() {
                     <button
                       key={project.id}
                       className={`w-full rounded-md border p-4 text-left transition-colors ${
-                        active?.id === project.id ? "border-emerald-500 bg-emerald-50" : "border-slate-200 bg-white hover:bg-slate-50"
+                        active?.id === project.id ? "border-emerald-500 bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-900/30" : "border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700/50"
                       }`}
                       onClick={() => setActiveProjectId(project.id)}
                     >
                       <h3 className="font-bold">{project.name}</h3>
-                      <p className="mt-1 text-sm text-slate-600 line-clamp-2">{project.description}</p>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300 line-clamp-2">{project.description}</p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
                         <span>{project.briefs?.length ?? 0} briefs</span>
                         <span>{project.experiment_plans?.length ?? 0} plans</span>
                         <span>{project.memory?.length ?? 0} memory items</span>
@@ -149,14 +149,14 @@ export default function DashboardPage() {
               {evidence.length ? (
                 <div className="grid gap-3 md:grid-cols-2">
                   {evidence.slice(0, 8).map((item) => (
-                    <article key={item.id} className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                    <article key={item.id} className="rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-600 dark:bg-slate-800/50">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold uppercase text-emerald-800">
+                        <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold uppercase text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
                           {item.extraction_type}
                         </span>
-                        <span className="max-w-[12rem] truncate text-xs text-slate-500">{item.source_id}</span>
+                        <span className="max-w-[12rem] truncate text-xs text-slate-500 dark:text-slate-400">{item.source_id}</span>
                       </div>
-                      <p className="mt-3 line-clamp-4 text-sm leading-6 text-slate-800">{item.claim}</p>
+                      <p className="mt-3 line-clamp-4 text-sm leading-6 text-slate-800 dark:text-slate-200">{item.claim}</p>
                     </article>
                   ))}
                 </div>
@@ -167,15 +167,15 @@ export default function DashboardPage() {
               {active?.experiment_plans?.length ? (
                 <div className="grid gap-3">
                   {active.experiment_plans.slice(0, 5).map((plan) => (
-                    <article key={plan.id} className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                    <article key={plan.id} className="rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-600 dark:bg-slate-800/50">
                       <div className="flex items-start justify-between gap-3">
                         <h3 className="text-sm font-bold">{plan.title}</h3>
-                        <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold uppercase text-emerald-800">
+                        <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold uppercase text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
                           {plan.status}
                         </span>
                       </div>
-                      <p className="mt-2 line-clamp-3 text-sm text-slate-700">{plan.objective}</p>
-                      <p className="mt-3 text-xs text-slate-500">
+                      <p className="mt-2 line-clamp-3 text-sm text-slate-700 dark:text-slate-200">{plan.objective}</p>
+                      <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
                         {(plan.datasets?.length ?? 0)} datasets / {(plan.baselines?.length ?? 0)} baselines / {(plan.metrics?.length ?? 0)} metrics
                       </p>
                     </article>
@@ -188,9 +188,9 @@ export default function DashboardPage() {
           <aside className="grid gap-6">
             <Panel title="Create Project" meta="quick start">
               <form className="grid gap-3" onSubmit={createProject}>
-                <input className="rounded-md border border-slate-300 p-2 text-sm" name="project_name" placeholder="Project name" />
+                <input className="rounded-md border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100" name="project_name" placeholder="Project name" />
                 <button
-                  className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                  className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                   disabled={busyAction === "project"}
                 >
                   {busyAction === "project" ? "Creating..." : "Create"}

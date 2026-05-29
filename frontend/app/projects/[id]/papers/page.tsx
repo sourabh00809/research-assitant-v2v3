@@ -55,41 +55,41 @@ export default function PapersPage() {
     <SidebarLayout>
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
         <header className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-900">Source Library</h1>
-          <p className="mt-1 text-sm text-slate-500">{project?.name} · {papers.length} papers</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Source Library</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{project?.name} · {papers.length} papers</p>
         </header>
 
         <div className="mb-6">
           <Panel title="Upload Paper">
-            <p className="mb-3 text-sm text-slate-500">Upload a PDF to extract text and add to the project source library.</p>
+            <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">Upload a PDF to extract text and add to the project source library.</p>
             <div className="flex flex-wrap gap-3">
-              <input ref={fileRef} type="file" accept=".pdf" className="rounded-md border border-slate-300 p-2 text-sm" />
+              <input ref={fileRef} type="file" accept=".pdf" className="rounded-md border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100" />
               <button disabled={uploading} onClick={handleUpload}
-                className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">
+                className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 disabled:opacity-50">
                 {uploading ? "Uploading..." : "Upload"}
               </button>
             </div>
-            <label className="mt-3 flex items-center gap-1.5 text-sm text-slate-600">
+            <label className="mt-3 flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
               <input
                 type="checkbox"
                 checked={useUnstructured}
                 onChange={(e) => setUseUnstructured(e.target.checked)}
-                className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
+                className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-500 dark:border-slate-600 dark:text-emerald-400 dark:focus:ring-emerald-400"
               />
               Use Unstructured API for enhanced PDF parsing (requires UNSTRUCTURED_API_KEY)
             </label>
-            {uploadError && <p className="mt-2 text-sm text-red-600">{uploadError}</p>}
+            {uploadError && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{uploadError}</p>}
           </Panel>
         </div>
 
         {papers.length ? (
           <div className="grid gap-3">
             {papers.map((paper: any) => (
-              <article key={paper.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <article key={paper.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-600 dark:bg-slate-800">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-semibold text-slate-900">{paper.title || paper.filename || "Untitled"}</h3>
-                    <p className="mt-1 text-xs text-slate-400">
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">{paper.title || paper.filename || "Untitled"}</h3>
+                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                       {paper.source_type ?? "pdf"} · {paper.page_count ? `${paper.page_count} pages` : ""} · {paper.filename ?? ""}
                     </p>
                   </div>

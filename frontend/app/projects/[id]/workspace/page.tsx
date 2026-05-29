@@ -86,8 +86,8 @@ export default function WorkspacePage() {
     <SidebarLayout>
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <header className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-900">{project?.name ?? "Workspace"}</h1>
-          <p className="mt-1 text-sm text-slate-500">{project?.description ?? "Research investigation workspace"}</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">{project?.name ?? "Workspace"}</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{project?.description ?? "Research investigation workspace"}</p>
         </header>
 
         <div className="mb-6 grid gap-4 sm:grid-cols-4">
@@ -102,7 +102,7 @@ export default function WorkspacePage() {
             <Panel title="Research Question">
               <div className="grid gap-3">
                 <textarea
-                  className="w-full rounded-md border border-slate-300 p-3 text-sm focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-md border border-slate-300 p-3 text-sm focus:border-emerald-500 focus:outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-emerald-400"
                   rows={3}
                   placeholder="Enter a research question..."
                   value={question}
@@ -110,7 +110,7 @@ export default function WorkspacePage() {
                 />
                 <div className="flex flex-wrap gap-2">
                   <button
-                    className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
+                    className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 disabled:opacity-50"
                     disabled={busy === "run" || !question.trim()}
                     onClick={runQuestion}
                   >
@@ -118,7 +118,7 @@ export default function WorkspacePage() {
                   </button>
 
                   <button
-                    className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700/50"
                     onClick={() => setShowAdvanced(!showAdvanced)}
                   >
                     {showAdvanced ? "Hide" : "Show"} Advanced
@@ -126,18 +126,18 @@ export default function WorkspacePage() {
                 </div>
 
                 {showAdvanced && (
-                  <div className="mt-2 grid gap-4 rounded-md border border-slate-200 bg-slate-50 p-4">
+                  <div className="mt-2 grid gap-4 rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-600 dark:bg-slate-800/50">
                     <div>
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Paper Sources</span>
-                      <p className="mb-2 text-xs text-slate-400">Leave all unchecked to use all available sources.</p>
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Paper Sources</span>
+                      <p className="mb-2 text-xs text-slate-400 dark:text-slate-500">Leave all unchecked to use all available sources.</p>
                       <div className="flex flex-wrap gap-3">
                         {SOURCES.map((s) => (
-                          <label key={s.key} className="flex items-center gap-1.5 text-sm text-slate-700">
+                          <label key={s.key} className="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-200">
                             <input
                               type="checkbox"
                               checked={selectedSources.includes(s.key)}
                               onChange={() => toggleSource(s.key)}
-                              className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
+className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-500 dark:border-slate-600 dark:text-emerald-400 dark:focus:ring-emerald-400"
                             />
                             {s.label}
                           </label>
@@ -147,11 +147,11 @@ export default function WorkspacePage() {
 
                     <div className="flex flex-wrap gap-6">
                       <div>
-                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">AI Provider</span>
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">AI Provider</span>
                         <select
                           value={provider}
                           onChange={(e) => setProvider(e.target.value)}
-                          className="mt-1 rounded-md border border-slate-300 p-2 text-sm"
+                          className="mt-1 rounded-md border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                         >
                           {PROVIDERS.map((p) => (
                             <option key={p.key} value={p.key}>{p.label}</option>
@@ -160,13 +160,13 @@ export default function WorkspacePage() {
                       </div>
 
                       <div>
-                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Web Search</span>
-                        <label className="mt-1 flex items-center gap-1.5 text-sm text-slate-700">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Web Search</span>
+                        <label className="mt-1 flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-200">
                           <input
                             type="checkbox"
                             checked={webSearch}
                             onChange={(e) => setWebSearch(e.target.checked)}
-                            className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
+                            className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-500 dark:border-slate-600 dark:text-emerald-400 dark:focus:ring-emerald-400"
                           />
                           Enable Tavily web search
                         </label>
@@ -179,7 +179,7 @@ export default function WorkspacePage() {
 
             {result?.error ? (
               <Panel title="Error">
-                <p className="text-sm text-red-600">{String(result.error)}</p>
+                <p className="text-sm text-red-600 dark:text-red-400">{String(result.error)}</p>
               </Panel>
             ) : null}
 
@@ -188,15 +188,15 @@ export default function WorkspacePage() {
                 <div className="grid gap-4">
                   {result.brief.question_interpretation ? (
                     <div>
-                      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Interpretation</h3>
-                      <p className="text-sm text-slate-700">{result.brief.question_interpretation}</p>
+                      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Interpretation</h3>
+                      <p className="text-sm text-slate-700 dark:text-slate-200">{result.brief.question_interpretation}</p>
                     </div>
                   ) : null}
 
                   {result.brief.key_findings?.length ? (
                     <div>
-                      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Key Findings</h3>
-                      <ul className="list-inside list-disc space-y-1 text-sm text-slate-700">
+                      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Key Findings</h3>
+                      <ul className="list-inside list-disc space-y-1 text-sm text-slate-700 dark:text-slate-200">
                         {result.brief.key_findings.slice(0, 5).map((f: string, i: number) => <li key={i}>{f}</li>)}
                       </ul>
                     </div>
@@ -204,14 +204,14 @@ export default function WorkspacePage() {
 
                   {result.brief.suggested_next_directions?.length ? (
                     <div>
-                      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Next Directions</h3>
-                      <ul className="list-inside list-disc space-y-1 text-sm text-slate-700">
+                      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Next Directions</h3>
+                      <ul className="list-inside list-disc space-y-1 text-sm text-slate-700 dark:text-slate-200">
                         {result.brief.suggested_next_directions.slice(0, 3).map((d: string, i: number) => <li key={i}>{d}</li>)}
                       </ul>
                     </div>
                   ) : null}
 
-                  <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-3">
+                  <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-3 dark:border-slate-600">
                     <button onClick={() => router.push(`/projects/${projectId}/evidence`)} className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
                       View All Evidence
                     </button>
@@ -230,19 +230,19 @@ export default function WorkspacePage() {
               <Panel title="Latest Evidence" meta={`${evidence.length} items`}>
                 <div className="grid gap-3 md:grid-cols-2">
                   {evidence.slice(0, 6).map((item) => (
-                    <article key={item.id} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <article key={item.id} className="rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-600 dark:bg-slate-800/50">
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold uppercase text-emerald-800">
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold uppercase text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
                           {item.extraction_type}
                         </span>
-                        <span className="truncate text-xs text-slate-400">{item.source_id}</span>
+                        <span className="truncate text-xs text-slate-400 dark:text-slate-500">{item.source_id}</span>
                       </div>
-                      <p className="mt-2 line-clamp-3 text-sm text-slate-700">{item.claim}</p>
+                      <p className="mt-2 line-clamp-3 text-sm text-slate-700 dark:text-slate-200">{item.claim}</p>
                     </article>
                   ))}
                 </div>
                 {evidence.length > 6 && (
-                  <button onClick={() => router.push(`/projects/${projectId}/evidence`)} className="mt-3 text-xs font-semibold text-emerald-600 hover:text-emerald-700">
+                  <button onClick={() => router.push(`/projects/${projectId}/evidence`)} className="mt-3 text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
                     View all {evidence.length} items →
                   </button>
                 )}
@@ -251,7 +251,7 @@ export default function WorkspacePage() {
 
             {!evidence.length && !result && (
               <Panel title="Getting Started">
-                <div className="grid gap-3 text-sm text-slate-600">
+                <div className="grid gap-3 text-sm text-slate-600 dark:text-slate-300">
                   <p>Enter a research question above and click <strong>Run Investigation</strong> to generate a citation-grounded research brief.</p>
                   <p>The system will:</p>
                   <ol className="list-inside list-decimal space-y-1">
@@ -261,7 +261,7 @@ export default function WorkspacePage() {
                     <li>Generate a grounded research brief with citations</li>
                     <li>Suggest experiment plans, hypotheses, and next directions</li>
                   </ol>
-                  <p className="mt-2 text-xs text-slate-400">Click <strong>Show Advanced</strong> to select specific sources, AI provider, or enable web search.</p>
+                  <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">Click <strong>Show Advanced</strong> to select specific sources, AI provider, or enable web search.</p>
                 </div>
               </Panel>
             )}
@@ -273,16 +273,16 @@ export default function WorkspacePage() {
                 <button onClick={() => router.push(`/projects/${projectId}/evidence`)} className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50">
                   Browse Evidence
                 </button>
-                <button onClick={() => router.push(`/projects/${projectId}/experiments`)} className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <button onClick={() => router.push(`/projects/${projectId}/experiments`)} className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700/50">
                   Experiment Planner
                 </button>
-                <button onClick={() => router.push(`/projects/${projectId}/memory`)} className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <button onClick={() => router.push(`/projects/${projectId}/memory`)} className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700/50">
                   Research Memory
                 </button>
-                <button onClick={() => router.push(`/projects/${projectId}/papers`)} className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <button onClick={() => router.push(`/projects/${projectId}/papers`)} className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700/50">
                   Source Library
                 </button>
-                <button onClick={() => router.push(`/projects/${projectId}/graph`)} className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <button onClick={() => router.push(`/projects/${projectId}/graph`)} className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700/50">
                   Research Graph
                 </button>
               </div>
@@ -290,11 +290,11 @@ export default function WorkspacePage() {
 
             <Panel title="Project Info" meta={project?.id ? "active" : "loading"}>
               {project ? (
-                <div className="grid gap-2 text-xs text-slate-500">
-                  <p><span className="font-semibold text-slate-700">ID:</span> {project.id}</p>
-                  <p><span className="font-semibold text-slate-700">Briefs:</span> {project.briefs?.length ?? 0}</p>
-                  <p><span className="font-semibold text-slate-700">Plans:</span> {project.experiment_plans?.length ?? 0}</p>
-                  <p><span className="font-semibold text-slate-700">Memory:</span> {project.memory?.length ?? 0} items</p>
+                <div className="grid gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <p><span className="font-semibold text-slate-700 dark:text-slate-200">ID:</span> {project.id}</p>
+                  <p><span className="font-semibold text-slate-700 dark:text-slate-200">Briefs:</span> {project.briefs?.length ?? 0}</p>
+                  <p><span className="font-semibold text-slate-700 dark:text-slate-200">Plans:</span> {project.experiment_plans?.length ?? 0}</p>
+                  <p><span className="font-semibold text-slate-700 dark:text-slate-200">Memory:</span> {project.memory?.length ?? 0} items</p>
                 </div>
               ) : <LoadingSpinner text="Loading project..." />}
             </Panel>

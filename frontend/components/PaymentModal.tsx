@@ -25,18 +25,18 @@ export function PaymentModal({ tier, price, name, onSuccess, onCancel }: Payment
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white shadow-xl">
+      <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-600 dark:bg-slate-800">
         {step === "form" && (
           <form onSubmit={handleSubmit}>
-            <div className="border-b border-slate-200 px-6 py-4">
-              <h2 className="text-lg font-bold">Upgrade to {name}</h2>
-              <p className="text-sm text-slate-600">{price} — billed monthly</p>
+            <div className="border-b border-slate-200 px-6 py-4 dark:border-slate-600">
+              <h2 className="text-lg font-bold dark:text-slate-100">Upgrade to {name}</h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{price} — billed monthly</p>
             </div>
             <div className="space-y-4 px-6 py-4">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-600">Cardholder Name</label>
+                <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-400">Cardholder Name</label>
                 <input
-                  className="w-full rounded-md border border-slate-300 p-2 text-sm"
+                  className="w-full rounded-md border border-slate-300 p-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                   value={cardName}
                   onChange={(e) => setCardName(e.target.value)}
                   placeholder="John Doe"
@@ -44,9 +44,9 @@ export function PaymentModal({ tier, price, name, onSuccess, onCancel }: Payment
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-600">Card Number</label>
+                <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-400">Card Number</label>
                 <input
-                  className="w-full rounded-md border border-slate-300 p-2 text-sm font-mono"
+                  className="w-full rounded-md border border-slate-300 p-2 text-sm font-mono dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                   value={cardNumber}
                   onChange={(e) => setCardNumber(e.target.value)}
                   placeholder="4242 4242 4242 4242"
@@ -56,9 +56,9 @@ export function PaymentModal({ tier, price, name, onSuccess, onCancel }: Payment
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-600">Expiry</label>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-400">Expiry</label>
                   <input
-                    className="w-full rounded-md border border-slate-300 p-2 text-sm font-mono"
+                    className="w-full rounded-md border border-slate-300 p-2 text-sm font-mono dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                     value={expiry}
                     onChange={(e) => setExpiry(e.target.value)}
                     placeholder="MM/YY"
@@ -67,9 +67,9 @@ export function PaymentModal({ tier, price, name, onSuccess, onCancel }: Payment
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-600">CVV</label>
+                  <label className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-400">CVV</label>
                   <input
-                    className="w-full rounded-md border border-slate-300 p-2 text-sm font-mono"
+                    className="w-full rounded-md border border-slate-300 p-2 text-sm font-mono dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                     value={cvv}
                     onChange={(e) => setCvv(e.target.value)}
                     placeholder="123"
@@ -79,17 +79,17 @@ export function PaymentModal({ tier, price, name, onSuccess, onCancel }: Payment
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4">
+            <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4 dark:border-slate-600">
               <button
                 type="button"
                 onClick={onCancel}
-                className="rounded-md px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+                className="rounded-md px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="rounded-md bg-emerald-700 px-6 py-2 text-sm font-bold text-white hover:bg-emerald-800"
+                className="rounded-md bg-emerald-700 px-6 py-2 text-sm font-bold text-white hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
               >
                 Pay {price}
               </button>
@@ -99,24 +99,24 @@ export function PaymentModal({ tier, price, name, onSuccess, onCancel }: Payment
 
         {step === "processing" && (
           <div className="flex flex-col items-center px-6 py-12">
-            <div className="mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
-            <p className="text-sm font-semibold text-slate-700">Processing payment...</p>
-            <p className="mt-1 text-xs text-slate-500">Please do not close this window</p>
+            <div className="mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700 dark:border-slate-600 dark:border-t-emerald-400" />
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Processing payment...</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Please do not close this window</p>
           </div>
         )}
 
         {step === "success" && (
           <div className="flex flex-col items-center px-6 py-12">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
-              <svg className="h-7 w-7 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
+              <svg className="h-7 w-7 text-emerald-700 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <p className="text-lg font-bold text-emerald-800">Payment Successful!</p>
-            <p className="mt-1 text-sm text-slate-600">You are now on the <strong>{name}</strong> plan.</p>
+            <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">Payment Successful!</p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">You are now on the <strong>{name}</strong> plan.</p>
             <button
               onClick={onSuccess}
-              className="mt-6 rounded-md bg-emerald-700 px-6 py-2 text-sm font-bold text-white hover:bg-emerald-800"
+              className="mt-6 rounded-md bg-emerald-700 px-6 py-2 text-sm font-bold text-white hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
             >
               Continue
             </button>
