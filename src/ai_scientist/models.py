@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import uuid4
 
@@ -12,7 +12,7 @@ def new_id(prefix: str) -> str:
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class PaperSource(BaseModel):
@@ -266,7 +266,7 @@ class ResearchBrief(BaseModel):
     speculative_suggestions: list[str] = Field(default_factory=list)
     memory_used: list[str] = Field(default_factory=list)
     memory_relevance_scores: list[MemoryRelevanceScore] = Field(default_factory=list)
-    quality_report: "EvidenceQualityReport | None" = None
+    quality_report: EvidenceQualityReport | None = None
     bibliography: list[str]
     created_at: str
 
@@ -533,11 +533,11 @@ class ResearchProject(BaseModel):
     uploaded_papers: list[UploadedPaper] = Field(default_factory=list)
     agent_runs: list[AgentRun] = Field(default_factory=list)
     quality_reports: list[EvidenceQualityReport] = Field(default_factory=list)
-    autonomous_agents: list["AgentDefinition"] = Field(default_factory=list)
-    autonomous_agent_runs: list["AgentRunRecord"] = Field(default_factory=list)
-    saved_searches: list["SavedSearch"] = Field(default_factory=list)
-    notifications: list["NotificationRecord"] = Field(default_factory=list)
-    execution_artifacts: list["ExecutionArtifact"] = Field(default_factory=list)
+    autonomous_agents: list[AgentDefinition] = Field(default_factory=list)
+    autonomous_agent_runs: list[AgentRunRecord] = Field(default_factory=list)
+    saved_searches: list[SavedSearch] = Field(default_factory=list)
+    notifications: list[NotificationRecord] = Field(default_factory=list)
+    execution_artifacts: list[ExecutionArtifact] = Field(default_factory=list)
 
 
 class CreateProjectRequest(BaseModel):

@@ -7,8 +7,8 @@ import re
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from collections.abc import Iterable
 from html import unescape
-from typing import Iterable
 
 from .embeddings import VectorSearchService, tokenize
 from .models import ConnectorStatus, DeduplicationRecord, PaperSource, new_id, utc_now

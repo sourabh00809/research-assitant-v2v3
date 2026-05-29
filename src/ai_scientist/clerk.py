@@ -7,9 +7,9 @@ import time
 import urllib.request
 from dataclasses import dataclass
 
-logger = logging.getLogger(__name__)
-
 from .config import settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -82,8 +82,8 @@ def _b64_decode(data: str) -> bytes:
 
 def _verify_rs256(signing_input: str, signature_b64: str, n_bytes: bytes, e_bytes: bytes) -> bool:
     try:
-        from cryptography.hazmat.primitives.asymmetric import rsa, padding
         from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.asymmetric import padding, rsa
         e_int = int.from_bytes(e_bytes, "big")
         n_int = int.from_bytes(n_bytes, "big")
         public_key = rsa.RSAPublicNumbers(e_int, n_int).public_key()

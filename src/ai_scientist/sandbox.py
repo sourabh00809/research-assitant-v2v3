@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import subprocess
 import sys
 import tempfile
@@ -51,10 +52,8 @@ def run_python_docker_sandbox(script: str, timeout_seconds: int = 5) -> dict:
                 "artifacts": artifacts,
             }
         except Exception as exc:
-            try:
+            with contextlib.suppress(Exception):
                 container.remove(force=True)  # type: ignore[name-defined]
-            except Exception:
-                pass
             return {
                 "backend": "docker",
                 "exit_code": -1,

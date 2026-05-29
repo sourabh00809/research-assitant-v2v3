@@ -4,8 +4,8 @@ import hashlib
 import logging
 import math
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 from .models import ChunkRankingResult, DocumentChunk, EmbeddingRecord, MemoryItem, ScoredResult, new_id, utc_now
 
@@ -167,7 +167,7 @@ def memory_relevance(query: str, memory: list[MemoryItem], limit: int = 5) -> li
 def cosine_similarity(left: list[float], right: list[float]) -> float:
     if not left or not right:
         return 0.0
-    return max(0.0, min(1.0, sum(a * b for a, b in zip(left, right))))
+    return max(0.0, min(1.0, sum(a * b for a, b in zip(left, right, strict=True))))
 
 
 def keyword_score(query: str, text: str) -> float:

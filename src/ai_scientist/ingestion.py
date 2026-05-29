@@ -24,7 +24,7 @@ def parse_with_unstructured(content: bytes, filename: str) -> list[tuple[int, st
             f"--{boundary}\r\n"
             f'Content-Disposition: form-data; name="files"; filename="{filename}"\r\n'
             f"Content-Type: application/pdf\r\n\r\n"
-        ).encode("utf-8") + content + f"\r\n--{boundary}--\r\n".encode("utf-8")
+        ).encode() + content + f"\r\n--{boundary}--\r\n".encode()
         request = urllib.request.Request(
             "https://api.unstructured.io/general/v0/general",
             data=body,

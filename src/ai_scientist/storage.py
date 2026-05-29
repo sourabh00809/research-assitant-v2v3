@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import sqlite3
+from collections.abc import Iterable
 from pathlib import Path
 from threading import Lock
-from typing import Iterable, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel
 
@@ -70,38 +72,32 @@ class SQLiteStore:
             return self._assemble_project(conn, project_id)
 
     def save_project(self, project: ResearchProject) -> ResearchProject:
-        with self._lock:
-            with self._connect() as conn:
-                self._save_project(conn, project)
+        with self._lock, self._connect() as conn:
+            self._save_project(conn, project)
         return project
 
     def delete_project(self, project_id: str) -> None:
-        with self._lock:
-            with self._connect() as conn:
-                conn.execute("delete from projects where id = ?", (project_id,))
+        with self._lock, self._connect() as conn:
+            conn.execute("delete from projects where id = ?", (project_id,))
 
     def save_question(self, project_id: str, question: ResearchQuestion) -> ResearchQuestion:
-        with self._lock:
-            with self._connect() as conn:
-                self._insert_payload(conn, "questions", question.id, project_id, question.created_at, question)
+        with self._lock, self._connect() as conn:
+            self._insert_payload(conn, "questions", question.id, project_id, question.created_at, question)
         return question
 
     def save_brief(self, project_id: str, brief: ResearchBrief) -> ResearchBrief:
-        with self._lock:
-            with self._connect() as conn:
-                self._insert_payload(conn, "briefs", brief.id, project_id, brief.created_at, brief)
+        with self._lock, self._connect() as conn:
+            self._insert_payload(conn, "briefs", brief.id, project_id, brief.created_at, brief)
         return brief
 
     def save_memory_item(self, project_id: str, item: MemoryItem) -> MemoryItem:
-        with self._lock:
-            with self._connect() as conn:
-                self._insert_payload(conn, "memory", item.id, project_id, item.created_at, item)
+        with self._lock, self._connect() as conn:
+            self._insert_payload(conn, "memory", item.id, project_id, item.created_at, item)
         return item
 
     def save_uploaded_paper(self, project_id: str, paper: UploadedPaper) -> UploadedPaper:
-        with self._lock:
-            with self._connect() as conn:
-                self._save_uploaded_paper(conn, project_id, paper)
+        with self._lock, self._connect() as conn:
+            self._save_uploaded_paper(conn, project_id, paper)
         return paper
 
     def list_uploaded_papers(self, project_id: str) -> list[UploadedPaper]:
@@ -135,8 +131,7 @@ class SQLiteStore:
         return [DocumentChunk.model_validate(json.loads(row["payload"])) for row in rows]
 
     def save_agent_run(self, project_id: str, run: AgentRun) -> AgentRun:
-        with self._lock:
-            with self._connect() as conn:
+        with self._lock, self._connect() as conn:
                 conn.execute(
                     """
                     insert into agent_runs (id, project_id, question_id, status, started_at, completed_at, provider, payload)
@@ -162,9 +157,8 @@ class SQLiteStore:
         return run
 
     def save_quality_report(self, project_id: str, report: EvidenceQualityReport) -> EvidenceQualityReport:
-        with self._lock:
-            with self._connect() as conn:
-                self._insert_payload(conn, "quality_reports", report.id, project_id, report.created_at, report)
+        with self._lock, self._connect() as conn:
+            self._insert_payload(conn, "quality_reports", report.id, project_id, report.created_at, report)
         return report
 
     def get_quality_report(self, project_id: str, report_id: str) -> EvidenceQualityReport | None:
@@ -190,8 +184,7 @@ class SQLiteStore:
         membership: TeamMembership,
         subscription: SubscriptionRecord,
     ) -> dict:
-        with self._lock:
-            with self._connect() as conn:
+        with self._lock, self._connect() as conn:
                 self._insert_global_payload(conn, "tenant_users", user.id, user.created_at, user)
                 self._insert_global_payload(conn, "teams", team.id, team.created_at, team)
                 self._insert_global_payload(conn, "team_memberships", membership.id, membership.created_at, membership)
@@ -211,10 +204,9 @@ class SQLiteStore:
         return {"user": user, "team": team, "membership": membership, "subscription": subscription}
 
     def record_usage_event(self, event: UsageEvent) -> UsageEvent:
-        with self._lock:
-            with self._connect() as conn:
-                conn.execute(
-                    """
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                """
                     insert into usage_events (id, subject_id, kind, quantity, created_at, payload)
                     values (?, ?, ?, ?, ?, ?)
                     on conflict(id) do update set
@@ -224,8 +216,8 @@ class SQLiteStore:
                         created_at = excluded.created_at,
                         payload = excluded.payload
                     """,
-                    (event.id, event.subject_id, event.kind, event.quantity, event.created_at, _dump(event)),
-                )
+                (event.id, event.subject_id, event.kind, event.quantity, event.created_at, _dump(event)),
+            )
         return event
 
     def list_usage_events(self, subject_id: str | None = None) -> list[UsageEvent]:
@@ -251,8 +243,7 @@ class SQLiteStore:
         return SubscriptionRecord.model_validate(json.loads(row["payload"])) if row else None
 
     def save_subscription(self, subscription: SubscriptionRecord) -> None:
-        with self._lock:
-            with self._connect() as conn:
+        with self._lock, self._connect() as conn:
                 conn.execute(
                     """
                     insert into subscriptions (id, team_id, tier, status, created_at, payload)
@@ -287,9 +278,8 @@ class SQLiteStore:
         return [Team.model_validate(json.loads(row["payload"])) for row in rows]
 
     def save_team(self, team: Team) -> None:
-        with self._lock:
-            with self._connect() as conn:
-                self._insert_global_payload(conn, "teams", team.id, team.created_at, team)
+        with self._lock, self._connect() as conn:
+            self._insert_global_payload(conn, "teams", team.id, team.created_at, team)
 
     def get_team(self, team_id: str) -> Team | None:
         with self._connect() as conn:
@@ -307,10 +297,9 @@ class SQLiteStore:
         return memberships
 
     def save_job(self, job: JobRecord) -> JobRecord:
-        with self._lock:
-            with self._connect() as conn:
-                conn.execute(
-                    """
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                """
                     insert into jobs (id, project_id, kind, status, created_at, updated_at, payload)
                     values (?, ?, ?, ?, ?, ?, ?)
                     on conflict(id) do update set
@@ -320,8 +309,8 @@ class SQLiteStore:
                         updated_at = excluded.updated_at,
                         payload = excluded.payload
                     """,
-                    (job.id, job.project_id, job.kind, job.status, job.created_at, job.updated_at, _dump(job)),
-                )
+                (job.id, job.project_id, job.kind, job.status, job.created_at, job.updated_at, _dump(job)),
+            )
         return job
 
     def get_job(self, job_id: str) -> JobRecord | None:
@@ -341,8 +330,7 @@ class SQLiteStore:
         return [JobRecord.model_validate(json.loads(row["payload"])) for row in rows]
 
     def save_object_record(self, record: ObjectStorageRecord) -> ObjectStorageRecord:
-        with self._lock:
-            with self._connect() as conn:
+        with self._lock, self._connect() as conn:
                 conn.execute(
                     """
                     insert into object_storage_records (id, project_id, kind, backend, uri, created_at, payload)
@@ -378,15 +366,11 @@ class SQLiteStore:
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path, timeout=30)
         conn.row_factory = sqlite3.Row
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             conn.execute("pragma journal_mode = wal")
-        except sqlite3.OperationalError:
-            pass
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             conn.execute("pragma synchronous = normal")
             conn.execute("pragma foreign_keys = on")
-        except sqlite3.OperationalError:
-            pass
         return conn
 
     def _bootstrap(self) -> None:

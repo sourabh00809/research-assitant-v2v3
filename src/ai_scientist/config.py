@@ -71,11 +71,9 @@ class Settings:
         return self.environment in {"production", "prod"}
 
     def validate(self) -> None:
-        if self.production:
-            if not self.disable_auth:
-                if not self.jwt_secret:
-                    raise RuntimeError("AI_SCIENTIST_JWT_SECRET must be set in production")
-            if not self.admin_email:
+        if self.production and not self.disable_auth and not self.jwt_secret:
+            raise RuntimeError("AI_SCIENTIST_JWT_SECRET must be set in production")
+        if self.production and not self.disable_auth and not self.admin_email:
                 raise RuntimeError("AI_SCIENTIST_ADMIN_EMAIL must be set in production")
 
     @property

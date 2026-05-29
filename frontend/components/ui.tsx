@@ -39,6 +39,10 @@ export function LoadingSpinner({ text = "Loading..." }: { text?: string }) {
   );
 }
 
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse rounded bg-slate-200 dark:bg-slate-700 ${className}`} />;
+}
+
 export function ErrorBanner({ message }: { message: string }) {
   return (
     <div className="rounded-md border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/30">
