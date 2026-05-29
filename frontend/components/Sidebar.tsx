@@ -135,7 +135,7 @@ export default function Sidebar() {
       <div className="border-t border-slate-200 px-4 py-3 dark:border-slate-700/50">
         <div className="flex items-center justify-between">
           <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-            {user?.primaryEmailAddress?.emailAddress === "sourabhnokhwal7@gmail.com" ? "admin" : "user"}
+            {user?.primaryEmailAddress?.emailAddress === (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "") ? "admin" : "user"}
           </span>
           <Link href="/projects" className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
             Projects

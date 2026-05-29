@@ -166,7 +166,7 @@ async def request_context_logging(request: Request, call_next):
 
 
 def validate_production_configuration() -> None:
-    pass
+    settings.validate()
 
 
 @app.exception_handler(Exception)

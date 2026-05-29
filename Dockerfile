@@ -1,6 +1,7 @@
 FROM node:20-slim AS frontend-builder
 
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_cmljaC1hYXJkdmFyay04MC5jbGVyay5hY2NvdW50cy5kZXYk
+ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 WORKDIR /app/frontend
 
@@ -16,7 +17,7 @@ FROM node:20-slim
 WORKDIR /app
 
 ENV PYTHONPATH=/app/src
-ENV AI_SCIENTIST_DISABLE_AUTH=1
+ENV AI_SCIENTIST_DISABLE_AUTH=0
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 python3-pip curl ca-certificates \

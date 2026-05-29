@@ -7,7 +7,7 @@ import { useUser, useAuth } from "@clerk/nextjs";
 import { Panel, LoadingSpinner } from "../../components/ui";
 import SidebarLayout from "../../components/SidebarLayout";
 
-const ADMIN_EMAIL = "sourabhnokhwal7@gmail.com";
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "";
 
 function getRole(email: string | undefined): string {
   return email === ADMIN_EMAIL ? "admin" : "user";

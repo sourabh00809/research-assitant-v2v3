@@ -15,7 +15,7 @@ class Settings:
         self.storage_backend = os.getenv("AI_SCIENTIST_STORAGE_BACKEND", "local").lower()
         self.storage_dir = Path(os.getenv("AI_SCIENTIST_STORAGE_DIR", BASE_DIR / "storage"))
         self.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-        self.jwt_secret = os.getenv("AI_SCIENTIST_JWT_SECRET", "dev-change-me")
+        self.jwt_secret = os.getenv("AI_SCIENTIST_JWT_SECRET", "")
         self.jwt_ttl_seconds = int(os.getenv("AI_SCIENTIST_JWT_TTL_SECONDS", "604800"))
         self.cookie_secure = os.getenv("AI_SCIENTIST_COOKIE_SECURE", "false").lower() == "true"
         self.cookie_samesite = os.getenv("AI_SCIENTIST_COOKIE_SAMESITE", "lax")
@@ -64,10 +64,18 @@ class Settings:
         self.clerk_secret_key = os.getenv("CLERK_SECRET_KEY", "")
         self.clerk_publishable_key = os.getenv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "")
         self.resend_api_key = os.getenv("RESEND_API_KEY", "")
+        self.admin_email = os.getenv("AI_SCIENTIST_ADMIN_EMAIL", "")
 
     @property
     def production(self) -> bool:
         return self.environment in {"production", "prod"}
+
+    def validate(self) -> None:
+        if self.production:
+            if not self.jwt_secret:
+                raise RuntimeError("AI_SCIENTIST_JWT_SECRET must be set in production")
+            if not self.admin_email:
+                raise RuntimeError("AI_SCIENTIST_ADMIN_EMAIL must be set in production")
 
     @property
     def resolved_store_backend(self) -> str:

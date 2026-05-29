@@ -54,6 +54,8 @@ services:
         sync: false
       - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
         sync: false
+      - key: NEXT_PUBLIC_ADMIN_EMAIL
+        sync: false
       - key: CLERK_SECRET_KEY
         sync: false
       - key: RESEND_API_KEY

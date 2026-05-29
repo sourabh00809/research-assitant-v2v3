@@ -9,8 +9,7 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
-
-ADMIN_EMAIL = "sourabhnokhwal7@gmail.com"
+from .config import settings
 
 
 @dataclass
@@ -20,7 +19,7 @@ class ClerkUser:
 
     @property
     def role(self) -> str:
-        return "admin" if self.email == ADMIN_EMAIL else "user"
+        return "admin" if self.email == settings.admin_email else "user"
 
 
 class ClerkVerifier:
