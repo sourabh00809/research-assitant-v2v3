@@ -2,40 +2,35 @@ from __future__ import annotations
 
 from email import policy
 from email.parser import BytesParser
-from typing import Any
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 
 from ..models import ExperimentPlan, MemoryItem, ResearchBrief, utc_now
-from ._state import state
 
 
-def resolve_brief(project: Any, brief_id: str | None = None, question_id: str | None = None) -> ResearchBrief | None:
-    pid = project.id if hasattr(project, "id") else project["id"]
-    briefs = project.briefs if hasattr(project, "briefs") else project.get("briefs") or []
+def resolve_brief(project, brief_id: str | None = None, question_id: str | None = None) -> ResearchBrief:
     if brief_id:
-        return state.store.get_brief(pid, brief_id)
+        brief = next((item for item in project.briefs if item.id == brief_id), None)
+        if not brief:
+            raise HTTPException(status_code=404, detail="Brief not found")
+        return brief
     if question_id:
-        for b in (briefs or []):
-            qid = b.question_id if hasattr(b, "question_id") else b.get("question_id")
-            bid = b.id if hasattr(b, "id") else b["id"]
-            if qid == question_id:
-                return state.store.get_brief(pid, bid)
-    if briefs:
-        bid = briefs[0].id if hasattr(briefs[0], "id") else briefs[0]["id"]
-        return state.store.get_brief(pid, bid)
-    return None
+        brief = next((item for item in project.briefs if item.question_id == question_id), None)
+        if not brief:
+            raise HTTPException(status_code=404, detail="Brief for question not found")
+        return brief
+    if project.briefs:
+        return project.briefs[0]
+    raise HTTPException(status_code=400, detail="Create a research brief before generating an experiment plan")
 
 
-def resolve_experiment_plan(project: Any, plan_id: str | None = None) -> ExperimentPlan | None:
-    pid = project.id if hasattr(project, "id") else project["id"]
-    plans = project.experiment_plans if hasattr(project, "experiment_plans") else project.get("experiment_plans") or []
+def resolve_experiment_plan(project, plan_id: str | None = None) -> ExperimentPlan | None:
     if plan_id:
-        return state.store.get_experiment_plan(pid, plan_id)
-    if plans:
-        eid = plans[0].id if hasattr(plans[0], "id") else plans[0]["id"]
-        return state.store.get_experiment_plan(pid, eid)
-    return None
+        plan = next((item for item in project.experiment_plans if item.id == plan_id), None)
+        if not plan:
+            raise HTTPException(status_code=404, detail="Experiment plan not found")
+        return plan
+    return project.experiment_plans[0] if project.experiment_plans else None
 
 
 def build_memory_from_brief(brief: ResearchBrief | None) -> list[MemoryItem]:
