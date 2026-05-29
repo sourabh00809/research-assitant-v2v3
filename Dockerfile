@@ -17,7 +17,7 @@ FROM node:20-slim
 WORKDIR /app
 
 ENV PYTHONPATH=/app/src
-ENV AI_SCIENTIST_DISABLE_AUTH=0
+ENV AI_SCIENTIST_DISABLE_AUTH=1
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 python3-pip curl ca-certificates \
